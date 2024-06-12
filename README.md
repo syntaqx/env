@@ -20,12 +20,16 @@ import (
 )
 
 func main() {
-    // TODO
+    if err := env.Load(); err != nil {
+        fmt.Printf("failed to load environment variables %v\n", err)
+    }
+
+    port := env.GetWithFallback("PORT", "8080")
+    fmt.Printf("Port: %s\n", port)
 }
 ```
 
 ### Roadmap
 
-- [ ] `.env` loading
 - [ ] Load environment variables into structs with tags
 - [ ] Type casting of environment variable values
