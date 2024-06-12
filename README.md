@@ -3,7 +3,11 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/syntaqx/env.svg)](https://pkg.go.dev/github.com/syntaqx/env)
 [![codecov](https://codecov.io/gh/syntaqx/env/graph/badge.svg?token=m4bBKy3UG3)](https://codecov.io/gh/syntaqx/env)
 
-`env` is a utility package to aid when using environment variables.
+`env` is an environment variable utility package.
+
+> [!NOTE]
+> This project is a work in progress as I build out functionality I require in
+> other projects I intend to use this package to support them.
 
 ### Usage
 
@@ -22,10 +26,6 @@ func main() {
 
 ### Roadmap
 
-> [!NOTE]
-> This project is going to be updated on an as needed basis for my other
-> projects, but these are things I expect I'll need in the future.
-
-- [ ] Add type casting for environment variables
-- [ ] Add support for loading .env files
-- [ ] Add support for struct tags
+- [ ] `.env` loading
+- [ ] Load environment variables into structs with tags
+- [ ] Type casting of environment variable values
