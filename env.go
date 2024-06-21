@@ -31,6 +31,20 @@ func GetWithFallback(key string, fallback string) string {
 	return fallback
 }
 
+// GetBool returns the value of an environment variable as a boolean.
+func GetBool(key string) bool {
+	return Get(key) == "true"
+}
+
+// GetBoolWithFallback returns the value of an environment variable as a boolean
+// or a fallback value if the environment variable is not set.
+func GetBoolWithFallback(key string, fallback bool) bool {
+	if value, ok := Lookup(key); ok {
+		return value == "true"
+	}
+	return fallback
+}
+
 // Load will read your env file(s) and load them into ENV for this process.
 //
 // Call this function as close as possible to the start of your program
