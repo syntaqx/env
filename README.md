@@ -26,6 +26,11 @@ func main() {
 
     port := env.GetWithFallback("PORT", "8080")
     fmt.Printf("Port: %s\n", port)
+
+    // Assuming the value of HOSTS is a comma separated list of strings
+    // Example: some-host:8000,another-host:8000
+    hosts := env.GetSliceWithFallback("HOSTS", []string{"fallback-host-1:8000", "fallback-host-2:8000"})
+    fmt.Printf("Hosts: %v\n", hosts)
 }
 ```
 
