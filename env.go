@@ -2,6 +2,7 @@ package env
 
 import (
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -27,6 +28,15 @@ func Get(key string) string {
 func GetWithFallback(key string, fallback string) string {
 	if value, ok := Lookup(key); ok {
 		return value
+	}
+	return fallback
+}
+
+// GetSliceWithFallback returns the value of a comma separated environment variable as a slice
+// of strings or a fallback value if the environment variable is not set.
+func GetSliceWithFallback(key string, fallback []string) []string {
+	if value, ok := Lookup(key); ok {
+		return strings.Split(value, ",")
 	}
 	return fallback
 }
