@@ -66,7 +66,7 @@ func GetBool(key string) bool {
 // or a fallback value if the environment variable is not set.
 func GetBoolWithFallback(key string, fallback bool) bool {
 	value := GetBool(key)
-	if value == false && os.Getenv(key) == "" {
+	if !value && os.Getenv(key) == "" {
 		return fallback
 	}
 	return value
