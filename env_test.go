@@ -34,10 +34,6 @@ type Config struct {
 	Database  DatabaseConfig `env:""`
 }
 
-func SetNil(key, value string) error {
-	return nil
-}
-
 func assertNoError(t *testing.T, err error, msgAndArgs ...interface{}) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
@@ -74,124 +70,96 @@ func TestSetUnset(t *testing.T) {
 
 func TestEnvFunctions(t *testing.T) {
 	tests := []struct {
-		name     string
-		key      string
-		setValue string
-		fallback interface{}
-		expected interface{}
-		setFunc  func(string, string) error
-		getFunc  func(string) (interface{}, error)
+		name                string
+		key                 string
+		setValue            string
+		fallback            interface{}
+		expected            interface{}
+		expectedFallback    interface{}
+		setFunc             func(string, string) error
+		getFunc             func(string) (interface{}, error)
+		getFuncWithFallback func(string, interface{}) interface{}
 	}{
 		{
-			name:     "string",
-			key:      "TEST_STRING",
-			setValue: "stringValue",
-			fallback: "",
-			expected: "stringValue",
-			setFunc:  Set,
-			getFunc:  func(key string) (interface{}, error) { return Get(key), nil },
+			name:                "string",
+			key:                 "TEST_STRING",
+			setValue:            "stringValue",
+			fallback:            "fallbackValue",
+			expected:            "stringValue",
+			expectedFallback:    "fallbackValue",
+			setFunc:             Set,
+			getFunc:             func(key string) (interface{}, error) { return Get(key), nil },
+			getFuncWithFallback: func(key string, fallback interface{}) interface{} { return GetWithFallback(key, fallback.(string)) },
 		},
 		{
-			name:     "string_fallback",
-			key:      "TEST_STRING_FALLBACK",
-			setValue: "",
-			fallback: "fallbackValue",
-			expected: "fallbackValue",
-			setFunc:  SetNil,
-			getFunc:  func(key string) (interface{}, error) { return GetWithFallback(key, "fallbackValue"), nil },
+			name:                "int",
+			key:                 "TEST_INT",
+			setValue:            "42",
+			fallback:            10,
+			expected:            42,
+			expectedFallback:    10,
+			setFunc:             Set,
+			getFunc:             func(key string) (interface{}, error) { return GetInt(key) },
+			getFuncWithFallback: func(key string, fallback interface{}) interface{} { return GetIntWithFallback(key, fallback.(int)) },
 		},
 		{
-			name:     "int",
-			key:      "TEST_INT",
-			setValue: "42",
-			fallback: 0,
-			expected: 42,
-			setFunc:  Set,
-			getFunc:  func(key string) (interface{}, error) { return GetInt(key) },
+			name:                "bool",
+			key:                 "TEST_BOOL",
+			setValue:            "true",
+			fallback:            false,
+			expected:            true,
+			expectedFallback:    false,
+			setFunc:             Set,
+			getFunc:             func(key string) (interface{}, error) { return GetBool(key), nil },
+			getFuncWithFallback: func(key string, fallback interface{}) interface{} { return GetBoolWithFallback(key, fallback.(bool)) },
 		},
 		{
-			name:     "int_fallback",
-			key:      "TEST_INT_FALLBACK",
-			setValue: "",
-			fallback: 10,
-			expected: 10,
-			setFunc:  SetNil,
-			getFunc:  func(key string) (interface{}, error) { return GetIntWithFallback(key, 10), nil },
+			name:             "float",
+			key:              "TEST_FLOAT",
+			setValue:         "42.42",
+			fallback:         10.1,
+			expected:         42.42,
+			expectedFallback: 10.1,
+			setFunc:          Set,
+			getFunc:          func(key string) (interface{}, error) { return GetFloat(key) },
+			getFuncWithFallback: func(key string, fallback interface{}) interface{} {
+				return GetFloatWithFallback(key, fallback.(float64))
+			},
 		},
 		{
-			name:     "bool",
-			key:      "TEST_BOOL",
-			setValue: "true",
-			fallback: false,
-			expected: true,
-			setFunc:  Set,
-			getFunc:  func(key string) (interface{}, error) { return GetBool(key), nil },
-		},
-		{
-			name:     "bool_fallback",
-			key:      "TEST_BOOL_FALLBACK",
-			setValue: "",
-			fallback: true,
-			expected: true,
-			setFunc:  SetNil,
-			getFunc:  func(key string) (interface{}, error) { return GetBoolWithFallback(key, true), nil },
-		},
-		{
-			name:     "float",
-			key:      "TEST_FLOAT",
-			setValue: "42.42",
-			fallback: 0.0,
-			expected: 42.42,
-			setFunc:  Set,
-			getFunc:  func(key string) (interface{}, error) { return GetFloat(key) },
-		},
-		{
-			name:     "float_fallback",
-			key:      "TEST_FLOAT_FALLBACK",
-			setValue: "",
-			fallback: 10.1,
-			expected: 10.1,
-			setFunc:  SetNil,
-			getFunc:  func(key string) (interface{}, error) { return GetFloatWithFallback(key, 10.1), nil },
-		},
-		{
-			name:     "slice",
-			key:      "TEST_SLICE",
-			setValue: "value1,value2",
-			fallback: []string{},
-			expected: []string{"value1", "value2"},
-			setFunc:  Set,
-			getFunc:  func(key string) (interface{}, error) { return GetSlice(key) },
-		},
-		{
-			name:     "slice_fallback",
-			key:      "TEST_SLICE_FALLBACK",
-			setValue: "",
-			fallback: []string{"fallback1", "fallback2"},
-			expected: []string{"fallback1", "fallback2"},
-			setFunc:  SetNil,
-			getFunc: func(key string) (interface{}, error) {
-				return GetSliceWithFallback(key, []string{"fallback1", "fallback2"}), nil
+			name:             "slice",
+			key:              "TEST_SLICE",
+			setValue:         "value1,value2",
+			fallback:         []string{"fallback1", "fallback2"},
+			expected:         []string{"value1", "value2"},
+			expectedFallback: []string{"fallback1", "fallback2"},
+			setFunc:          Set,
+			getFunc:          func(key string) (interface{}, error) { return GetSlice(key) },
+			getFuncWithFallback: func(key string, fallback interface{}) interface{} {
+				return GetSliceWithFallback(key, fallback.([]string))
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Test with set value
 			err := tt.setFunc(tt.key, tt.setValue)
 			assertNoError(t, err, tt.name)
 
 			val, err := tt.getFunc(tt.key)
 			assertNoError(t, err, tt.name)
+			assertEqual(t, tt.expected, val, tt.name)
 
+			val = tt.getFuncWithFallback(tt.key, tt.fallback)
 			assertEqual(t, tt.expected, val, tt.name)
 
 			err = Unset(tt.key)
 			assertNoError(t, err, tt.name)
 
-			if _, ok := Lookup(tt.key); ok {
-				t.Errorf("%s: expected %s to be unset", tt.name, tt.key)
-			}
+			// Test with fallback value
+			val = tt.getFuncWithFallback(tt.key, tt.fallback)
+			assertEqual(t, tt.expectedFallback, val, tt.name)
 		})
 	}
 }
@@ -230,15 +198,6 @@ func TestParseBool(t *testing.T) {
 		result := parseBool(tt.input)
 		assertEqual(t, tt.expected, result, "parseBool")
 	}
-}
-
-func TestGetBool(t *testing.T) {
-	key := "TEST_BOOL"
-	err := Set(key, "true")
-	assertNoError(t, err, "Set")
-	assertEqual(t, true, GetBool(key), "GetBool")
-	err = Unset(key)
-	assertNoError(t, err, "Unset")
 }
 
 func TestUnsetError(t *testing.T) {
