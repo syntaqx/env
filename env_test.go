@@ -86,10 +86,10 @@ func TestEnvFunctions(t *testing.T) {
 			name:     "string",
 			key:      "TEST_STRING",
 			setValue: "stringValue",
-			fallback: "fallbackValue",
+			fallback: "",
 			expected: "stringValue",
 			setFunc:  Set,
-			getFunc:  func(key string) (interface{}, error) { return GetWithFallback(key, "fallbackValue"), nil },
+			getFunc:  func(key string) (interface{}, error) { return Get(key), nil },
 		},
 		{
 			name:     "string_fallback",
@@ -104,10 +104,10 @@ func TestEnvFunctions(t *testing.T) {
 			name:     "int",
 			key:      "TEST_INT",
 			setValue: "42",
-			fallback: 10,
+			fallback: 0,
 			expected: 42,
 			setFunc:  Set,
-			getFunc:  func(key string) (interface{}, error) { return GetIntWithFallback(key, 10), nil },
+			getFunc:  func(key string) (interface{}, error) { return GetInt(key) },
 		},
 		{
 			name:     "int_fallback",
@@ -125,7 +125,7 @@ func TestEnvFunctions(t *testing.T) {
 			fallback: false,
 			expected: true,
 			setFunc:  Set,
-			getFunc:  func(key string) (interface{}, error) { return GetBoolWithFallback(key, false), nil },
+			getFunc:  func(key string) (interface{}, error) { return GetBool(key), nil },
 		},
 		{
 			name:     "bool_fallback",
@@ -140,10 +140,10 @@ func TestEnvFunctions(t *testing.T) {
 			name:     "float",
 			key:      "TEST_FLOAT",
 			setValue: "42.42",
-			fallback: 10.1,
+			fallback: 0.0,
 			expected: 42.42,
 			setFunc:  Set,
-			getFunc:  func(key string) (interface{}, error) { return GetFloatWithFallback(key, 10.1), nil },
+			getFunc:  func(key string) (interface{}, error) { return GetFloat(key) },
 		},
 		{
 			name:     "float_fallback",
@@ -158,12 +158,10 @@ func TestEnvFunctions(t *testing.T) {
 			name:     "slice",
 			key:      "TEST_SLICE",
 			setValue: "value1,value2",
-			fallback: []string{"fallback1", "fallback2"},
+			fallback: []string{},
 			expected: []string{"value1", "value2"},
 			setFunc:  Set,
-			getFunc: func(key string) (interface{}, error) {
-				return GetSliceWithFallback(key, []string{"fallback1", "fallback2"}), nil
-			},
+			getFunc:  func(key string) (interface{}, error) { return GetSlice(key) },
 		},
 		{
 			name:     "slice_fallback",
@@ -231,6 +229,24 @@ func TestParseBool(t *testing.T) {
 	for _, tt := range tests {
 		result := parseBool(tt.input)
 		assertEqual(t, tt.expected, result, "parseBool")
+	}
+}
+
+func TestGetBool(t *testing.T) {
+	key := "TEST_BOOL"
+	err := Set(key, "true")
+	assertNoError(t, err, "Set")
+	assertEqual(t, true, GetBool(key), "GetBool")
+	err = Unset(key)
+	assertNoError(t, err, "Unset")
+}
+
+func TestUnsetError(t *testing.T) {
+	err := Unset("")
+	if runtime.GOOS == "windows" {
+		assertError(t, err, "Unset")
+	} else {
+		assertNoError(t, err, "Unset")
 	}
 }
 
@@ -318,15 +334,4 @@ func TestUnmarshalSetFieldErrors(t *testing.T) {
 func TestSetError(t *testing.T) {
 	err := Set("", "value")
 	assertError(t, err, "Set")
-}
-
-func TestUnsetError(t *testing.T) {
-	err := Unset("")
-
-	if runtime.GOOS == "windows" {
-		assertError(t, err, "Unset")
-		return
-	} else {
-		assertNoError(t, err, "Unset")
-	}
 }

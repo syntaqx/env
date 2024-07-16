@@ -38,13 +38,23 @@ func GetWithFallback(key string, fallback string) string {
 	return fallback
 }
 
+// GetSlice returns the value of a comma-separated environment variable as a slice of strings.
+func GetSlice(key string) ([]string, error) {
+	value := Get(key)
+	if value == "" {
+		return nil, fmt.Errorf("environment variable %s not set", key)
+	}
+	return strings.Split(value, ","), nil
+}
+
 // GetSliceWithFallback returns the value of a comma-separated environment variable as a slice
 // of strings or a fallback value if the environment variable is not set.
 func GetSliceWithFallback(key string, fallback []string) []string {
-	if value, ok := Lookup(key); ok {
-		return strings.Split(value, ",")
+	value, err := GetSlice(key)
+	if err != nil {
+		return fallback
 	}
-	return fallback
+	return value
 }
 
 // GetBool returns the value of an environment variable as a boolean.
@@ -55,10 +65,11 @@ func GetBool(key string) bool {
 // GetBoolWithFallback returns the value of an environment variable as a boolean
 // or a fallback value if the environment variable is not set.
 func GetBoolWithFallback(key string, fallback bool) bool {
-	if value, ok := Lookup(key); ok {
-		return parseBool(value)
+	value := GetBool(key)
+	if value == false && os.Getenv(key) == "" {
+		return fallback
 	}
-	return fallback
+	return value
 }
 
 // GetInt returns the value of an environment variable as an integer.
@@ -73,12 +84,11 @@ func GetInt(key string) (int, error) {
 // GetIntWithFallback returns the value of an environment variable as an integer
 // or a fallback value if the environment variable is not set or invalid.
 func GetIntWithFallback(key string, fallback int) int {
-	if value, ok := Lookup(key); ok {
-		if intValue, err := strconv.Atoi(value); err == nil {
-			return intValue
-		}
+	value, err := GetInt(key)
+	if err != nil {
+		return fallback
 	}
-	return fallback
+	return value
 }
 
 // GetFloat returns the value of an environment variable as a float.
@@ -93,12 +103,11 @@ func GetFloat(key string) (float64, error) {
 // GetFloatWithFallback returns the value of an environment variable as a float
 // or a fallback value if the environment variable is not set or invalid.
 func GetFloatWithFallback(key string, fallback float64) float64 {
-	if value, ok := Lookup(key); ok {
-		if floatValue, err := strconv.ParseFloat(value, 64); err == nil {
-			return floatValue
-		}
+	value, err := GetFloat(key)
+	if err != nil {
+		return fallback
 	}
-	return fallback
+	return value
 }
 
 // Require checks if an environment variable is set and returns an error if it is not.
