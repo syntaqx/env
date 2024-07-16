@@ -1,170 +1,265 @@
 package env
 
 import (
-	"os"
+	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
-func TestGetWithFallback(t *testing.T) {
+type RedisMode string
+
+const (
+	RedisModeStandalone RedisMode = "standalone"
+	RedisModeCluster    RedisMode = "cluster"
+)
+
+type DatabaseConfig struct {
+	Host     string `env:"DATABASE_HOST,default=localhost"`
+	Port     int    `env:"DATABASE_PORT|DB_PORT,fallback=3306"`
+	Username string `env:"DATABASE_USERNAME,default=root"`
+	Password string `env:"DATABASE_PASSWORD,required"`
+	Database string `env:"DATABASE_NAME"`
+}
+
+type Config struct {
+	Debug     bool           `env:"DEBUG"`
+	Port      string         `env:"PORT,default=8080"`
+	RedisHost []string       `env:"REDIS_HOST|REDIS_HOSTS,default=localhost:6379"`
+	RedisMode RedisMode      `env:"REDIS_MODE,default=standalone"`
+	Database  DatabaseConfig `env:""`
+}
+
+func TestSetUnset(t *testing.T) {
+	key, value := "TEST_KEY", "TEST_VALUE"
+	err := Set(key, value)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if Get(key) != value {
+		t.Fatalf("expected %s, got %s", value, Get(key))
+	}
+
+	err = Unset(key)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if _, ok := Lookup(key); ok {
+		t.Fatalf("expected %s to be unset", key)
+	}
+}
+
+func TestEnvFunctions(t *testing.T) {
 	tests := []struct {
-		setValue  bool
-		key       string
-		fallback  string
-		envValue  string
-		wantValue string
+		name       string
+		key        string
+		setValue   string
+		fallback   interface{}
+		expected   interface{}
+		setFunc    func(string, string) error
+		getFunc    func(string) (interface{}, error)
+		unsetFunc  func(string) error
+		lookupFunc func(string) (string, bool)
 	}{
 		{
-			setValue:  true,
-			key:       "EXISTING_KEY",
-			fallback:  "fallback_value",
-			envValue:  "existing_value",
-			wantValue: "existing_value",
+			name:       "string",
+			key:        "TEST_STRING",
+			setValue:   "stringValue",
+			fallback:   "fallbackValue",
+			expected:   "stringValue",
+			setFunc:    Set,
+			getFunc:    func(key string) (interface{}, error) { return GetWithFallback(key, "fallbackValue"), nil },
+			unsetFunc:  Unset,
+			lookupFunc: Lookup,
 		},
 		{
-			setValue:  false,
-			key:       "NON_EXISTING_KEY",
-			fallback:  "fallback_value",
-			envValue:  "",
-			wantValue: "fallback_value",
+			name:       "int",
+			key:        "TEST_INT",
+			setValue:   "42",
+			fallback:   10,
+			expected:   42,
+			setFunc:    Set,
+			getFunc:    func(key string) (interface{}, error) { return GetIntWithFallback(key, 10), nil },
+			unsetFunc:  Unset,
+			lookupFunc: Lookup,
 		},
 		{
-			setValue:  true,
-			key:       "EMPTY_VALUE_KEY",
-			fallback:  "fallback_value",
-			envValue:  "",
-			wantValue: "",
+			name:       "bool",
+			key:        "TEST_BOOL",
+			setValue:   "true",
+			fallback:   false,
+			expected:   true,
+			setFunc:    Set,
+			getFunc:    func(key string) (interface{}, error) { return GetBoolWithFallback(key, false), nil },
+			unsetFunc:  Unset,
+			lookupFunc: Lookup,
+		},
+		{
+			name:       "float",
+			key:        "TEST_FLOAT",
+			setValue:   "42.42",
+			fallback:   10.1,
+			expected:   42.42,
+			setFunc:    Set,
+			getFunc:    func(key string) (interface{}, error) { return GetFloatWithFallback(key, 10.1), nil },
+			unsetFunc:  Unset,
+			lookupFunc: Lookup,
+		},
+		{
+			name:     "slice",
+			key:      "TEST_SLICE",
+			setValue: "value1,value2",
+			fallback: []string{"fallback1", "fallback2"},
+			expected: []string{"value1", "value2"},
+			setFunc:  Set,
+			getFunc: func(key string) (interface{}, error) {
+				return GetSliceWithFallback(key, []string{"fallback1", "fallback2"}), nil
+			},
+			unsetFunc:  Unset,
+			lookupFunc: Lookup,
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.key, func(t *testing.T) {
-			// Set the environment variable
-			if tt.setValue {
-				os.Setenv(tt.key, tt.envValue)
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.setFunc(tt.key, tt.setValue)
+			if err != nil {
+				t.Fatalf("expected no error, got %v", err)
 			}
 
-			// Call the function under test
-			got := GetWithFallback(tt.key, tt.fallback)
-
-			// Check if the returned value matches the expected value
-			if got != tt.wantValue {
-				t.Errorf("GetWithFallback(%q, %q) = %q, want %q", tt.key, tt.fallback, got, tt.wantValue)
+			val, err := tt.getFunc(tt.key)
+			if err != nil {
+				t.Fatalf("expected no error, got %v", err)
 			}
 
-			// Unset the environment variable
-			os.Unsetenv(tt.key)
+			if !reflect.DeepEqual(val, tt.expected) {
+				t.Fatalf("expected %v, got %v", tt.expected, val)
+			}
+
+			err = tt.unsetFunc(tt.key)
+			if err != nil {
+				t.Fatalf("expected no error, got %v", err)
+			}
+
+			if _, ok := tt.lookupFunc(tt.key); ok {
+				t.Fatalf("expected %s to be unset", tt.key)
+			}
 		})
 	}
 }
-func TestGetBoolWithFallback(t *testing.T) {
-	tests := []struct {
-		setValue  bool
-		key       string
-		fallback  bool
-		envValue  string
-		wantValue bool
-	}{
-		{
-			setValue:  true,
-			key:       "EXISTING_KEY",
-			fallback:  true,
-			envValue:  "true",
-			wantValue: true,
-		},
-		{
-			setValue:  false,
-			key:       "NON_EXISTING_KEY",
-			fallback:  true,
-			envValue:  "",
-			wantValue: true,
-		},
-		{
-			setValue:  true,
-			key:       "EMPTY_VALUE_KEY",
-			fallback:  false,
-			envValue:  "",
-			wantValue: false,
-		},
+
+func TestRequire(t *testing.T) {
+	key := "TEST_REQUIRED"
+
+	err := Require(key)
+	if err == nil {
+		t.Fatalf("expected error, got nil")
 	}
-	for _, tt := range tests {
-		t.Run(tt.key, func(t *testing.T) {
-			// Set the environment variable
-			if tt.setValue {
-				os.Setenv(tt.key, tt.envValue)
-			}
-			// Call the function under test
-			got := GetBoolWithFallback(tt.key, tt.fallback)
-			// Check if the returned value matches the expected value
-			if got != tt.wantValue {
-				t.Errorf("GetBoolWithFallback(%q, %v) = %v, want %v", tt.key, tt.fallback, got, tt.wantValue)
-			}
-			// Unset the environment variable
-			os.Unsetenv(tt.key)
-		})
+
+	if err := Set(key, "value"); err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	err = Require(key)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if err := Unset(key); err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 }
-func TestGetSliceWithFallback(t *testing.T) {
-	tests := []struct {
-		setValue  bool
-		key       string
-		fallback  []string
-		envValue  string
-		wantValue []string
-	}{
-		{
-			setValue:  true,
-			key:       "EXISTING_KEY_SLICE_ONE_VALUE",
-			fallback:  []string{"fallback_value_1"},
-			envValue:  "existing_value",
-			wantValue: []string{"existing_value"},
+
+func TestUnmarshal(t *testing.T) {
+	_ = Set("DEBUG", "true")
+	_ = Set("PORT", "9090")
+	_ = Set("REDIS_HOST", "host1,host2")
+	_ = Set("REDIS_MODE", "cluster")
+	_ = Set("DATABASE_HOST", "dbhost")
+	_ = Set("DATABASE_PORT", "5432")
+	_ = Set("DATABASE_USERNAME", "admin")
+	_ = Set("DATABASE_PASSWORD", "secret")
+	_ = Set("DATABASE_NAME", "mydb")
+
+	var cfg Config
+	if err := Unmarshal(&cfg); err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	expected := Config{
+		Debug: true,
+		Port:  "9090",
+		RedisHost: []string{
+			"host1",
+			"host2",
 		},
-		{
-			setValue:  false,
-			key:       "NON_EXISTING_KEY_SLICE",
-			fallback:  []string{"fallback_value"},
-			envValue:  "",
-			wantValue: []string{"fallback_value"},
-		},
-		{
-			setValue:  true,
-			key:       "EMPTY_VALUE_KEY_SLICE",
-			fallback:  []string{"fallback_value"},
-			envValue:  "",
-			wantValue: []string{""},
-		},
-		{
-			setValue:  true,
-			key:       "EXISTING_KEY_SLICE_MULTI_VALUE",
-			fallback:  []string{"fallback_value_1", "fallback_value_2"},
-			envValue:  "existing_value_1,existing_value_2",
-			wantValue: []string{"existing_value_1", "existing_value_2"},
-		},
-		{
-			setValue:  false,
-			key:       "NON_EXISTING_KEY_SLICE_MULTI_VALUE",
-			fallback:  []string{"fallback_value_1", "fallback_value_2"},
-			envValue:  "",
-			wantValue: []string{"fallback_value_1", "fallback_value_2"},
+		RedisMode: RedisModeCluster,
+		Database: DatabaseConfig{
+			Host:     "dbhost",
+			Port:     5432,
+			Username: "admin",
+			Password: "secret",
+			Database: "mydb",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.key, func(t *testing.T) {
-			// Set the environment variable
-			if tt.setValue {
-				os.Setenv(tt.key, tt.envValue)
-			}
+	if !reflect.DeepEqual(cfg, expected) {
+		t.Fatalf("expected %+v, got %+v", expected, cfg)
+	}
+}
 
-			// Call the function under test
-			got := GetSliceWithFallback(tt.key, tt.fallback)
+func TestUnmarshalRequired(t *testing.T) {
+	type RequiredConfig struct {
+		RequiredVar string `env:"REQUIRED_VAR,required"`
+	}
 
-			// Check if the returned value matches the expected value
-			assert.ElementsMatch(t, tt.wantValue, got, "GetSliceWithFallback(%q, %q) should return expected slice elements, order ignored", tt.key, tt.fallback)
+	var cfg RequiredConfig
+	err := Unmarshal(&cfg)
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+	expectedErr := "required environment variable REQUIRED_VAR is not set"
+	if err.Error() != expectedErr {
+		t.Fatalf("expected error %s, got %s", expectedErr, err.Error())
+	}
 
-			// Unset the environment variable
-			os.Unsetenv(tt.key)
-		})
+	_ = Set("REQUIRED_VAR", "value")
+	err = Unmarshal(&cfg)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if cfg.RequiredVar != "value" {
+		t.Fatalf("expected value, got %s", cfg.RequiredVar)
+	}
+}
+
+func TestMarshal(t *testing.T) {
+	expected := Config{
+		Debug: true,
+		Port:  "9090",
+		RedisHost: []string{
+			"host1",
+			"host2",
+		},
+		RedisMode: RedisModeCluster,
+		Database: DatabaseConfig{
+			Host:     "dbhost",
+			Port:     5432,
+			Username: "admin",
+			Password: "secret",
+			Database: "mydb",
+		},
+	}
+
+	if err := Marshal(&expected); err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	var cfg Config
+	if err := Unmarshal(&cfg); err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if !reflect.DeepEqual(cfg, expected) {
+		t.Fatalf("expected %+v, got %+v", expected, cfg)
 	}
 }
