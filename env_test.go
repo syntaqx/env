@@ -318,10 +318,3 @@ func TestSetError(t *testing.T) {
 	err := Set("", "value")
 	assertError(t, err, "Set")
 }
-
-// TODO:
-// - Does this function only error on windows?
-// func TestUnsetError(t *testing.T) {
-// 	err := Unset("")
-// 	assertError(t, err, "Unset")
-// }
