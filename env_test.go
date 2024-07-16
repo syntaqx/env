@@ -36,19 +36,19 @@ type Config struct {
 
 func assertNoError(t *testing.T, err error, msgAndArgs ...interface{}) {
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf("unexpected error: %v %v", err, msgAndArgs)
 	}
 }
 
 func assertError(t *testing.T, err error, msgAndArgs ...interface{}) {
 	if err == nil {
-		t.Errorf("expected error, got nil")
+		t.Errorf("expected error, got nil %v", msgAndArgs...)
 	}
 }
 
 func assertEqual(t *testing.T, expected, actual interface{}, msgAndArgs ...interface{}) {
 	if !reflect.DeepEqual(expected, actual) {
-		t.Errorf("expected %v, got %v", expected, actual)
+		t.Errorf("expected %v, got %v %v", expected, actual, msgAndArgs)
 	}
 }
 
@@ -246,6 +246,48 @@ func TestUnmarshal(t *testing.T) {
 	}
 
 	assertEqual(t, expected, cfg, "Unmarshal")
+}
+
+func TestUnmarshalFloat(t *testing.T) {
+	_ = Set("FLOAT32_VALUE", "3.14")
+	_ = Set("FLOAT64_VALUE", "3.14159")
+
+	var cfg struct {
+		Float32Value float32 `env:"FLOAT32_VALUE"`
+		Float64Value float64 `env:"FLOAT64_VALUE"`
+	}
+	err := Unmarshal(&cfg)
+	assertNoError(t, err, "Unmarshal FloatConfig")
+
+	expected := struct {
+		Float32Value float32
+		Float64Value float64
+	}{
+		Float32Value: 3.14,
+		Float64Value: 3.14159,
+	}
+
+	assertEqual(t, expected.Float32Value, cfg.Float32Value, "Float32Value")
+	assertEqual(t, expected.Float64Value, cfg.Float64Value, "Float64Value")
+
+	err = Unset("FLOAT32_VALUE")
+	assertNoError(t, err, "Unset FLOAT32_VALUE")
+
+	err = Unset("FLOAT64_VALUE")
+	assertNoError(t, err, "Unset FLOAT64_VALUE")
+}
+
+func TestUnmarshalUnsupportedKind(t *testing.T) {
+	_ = Set("UNSUPPORTED", "invalid")
+
+	var cfg struct {
+		Unsupported complex64 `env:"UNSUPPORTED"`
+	}
+	err := Unmarshal(&cfg)
+	assertError(t, err, "Unmarshal Unsupported kind")
+
+	err = Unset("UNSUPPORTED")
+	assertNoError(t, err, "Unset UNSUPPORTED")
 }
 
 func TestUnmarshalRequired(t *testing.T) {
