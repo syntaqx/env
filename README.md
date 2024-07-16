@@ -5,10 +5,6 @@
 
 `env` is an environment variable utility package for Go.
 
-> [!NOTE]
-> This project is a work in progress as I build out functionality I require in
-> other projects I intend to use this package to support them.
-
 ## Usage
 
 ### Basic Usage
@@ -44,6 +40,7 @@ package main
 import (
     "fmt"
     "log"
+
     "github.com/syntaqx/env"
 )
 
