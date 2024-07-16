@@ -2,6 +2,7 @@ package env
 
 import (
 	"reflect"
+	"runtime"
 	"testing"
 )
 
@@ -317,4 +318,15 @@ func TestUnmarshalSetFieldErrors(t *testing.T) {
 func TestSetError(t *testing.T) {
 	err := Set("", "value")
 	assertError(t, err, "Set")
+}
+
+func TestUnsetError(t *testing.T) {
+	err := Unset("")
+
+	if runtime.GOOS == "windows" {
+		assertError(t, err, "Unset")
+		return
+	} else {
+		assertNoError(t, err, "Unset")
+	}
 }
