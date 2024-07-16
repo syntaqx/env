@@ -15,11 +15,11 @@ const (
 )
 
 type DatabaseConfig struct {
-	Host     string `env:"DATABASE_HOST|DB_HOST,default=localhost"`
+	Host     string `env:"DATABASE_HOST,default=localhost"`
 	Port     int    `env:"DATABASE_PORT|DB_PORT,default=3306"`
-	Username string `env:"DATABASE_USERNAME|DB_USER,default=root"`
-	Password string `env:"DATABASE_PASSWORD|DB_PASS"`
-	Database string `env:"DATABASE_NAME|DB_NAME"`
+	Username string `env:"DATABASE_USERNAME,default=root"`
+	Password string `env:"DATABASE_PASSWORD"`
+	Database string `env:"DATABASE_NAME"`
 }
 
 type Config struct {
@@ -34,15 +34,15 @@ func main() {
 	var cfg Config
 
 	// Set example environment variables
-	env.Set("DEBUG", "true")
-	env.Set("PORT", "9090")
-	env.Set("REDIS_HOST", "host1,host2")
-	env.Set("REDIS_MODE", "cluster")
-	env.Set("DATABASE_HOST", "dbhost")
-	env.Set("DATABASE_PORT", "5432")
-	env.Set("DATABASE_USERNAME", "admin")
-	env.Set("DATABASE_PASSWORD", "secret")
-	env.Set("DATABASE_NAME", "mydb")
+	_ = env.Set("DEBUG", "true")
+	_ = env.Set("PORT", "9090")
+	_ = env.Set("REDIS_HOST", "host1,host2")
+	_ = env.Set("REDIS_MODE", "cluster")
+	_ = env.Set("DATABASE_HOST", "dbhost")
+	_ = env.Set("DATABASE_PORT", "5432")
+	_ = env.Set("DATABASE_USERNAME", "admin")
+	_ = env.Set("DATABASE_PASSWORD", "secret")
+	_ = env.Set("DATABASE_NAME", "mydb")
 
 	if err := env.Unmarshal(&cfg); err != nil {
 		log.Fatalf("Error unmarshalling config: %v", err)

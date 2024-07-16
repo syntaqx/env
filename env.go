@@ -202,3 +202,37 @@ func setField(field reflect.Value, value string) error {
 	}
 	return nil
 }
+
+// Marshal sets environment variables from a struct based on `env` tags.
+func Marshal(cfg interface{}) error {
+	v := reflect.ValueOf(cfg).Elem()
+	t := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		fieldType := t.Field(i)
+		tag := fieldType.Tag.Get("env")
+
+		if tag == "" {
+			if field.Kind() == reflect.Struct {
+				if err := Marshal(field.Addr().Interface()); err != nil {
+					return err
+				}
+			}
+			continue
+		}
+
+		key := strings.Split(tag, ",")[0]
+		value := fmt.Sprintf("%v", field.Interface())
+
+		if field.Kind() == reflect.Slice && field.Type().Elem().Kind() == reflect.String {
+			value = strings.Join(field.Interface().([]string), ",")
+		}
+
+		if err := Set(key, value); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
