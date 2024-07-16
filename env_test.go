@@ -248,6 +248,26 @@ func TestUnmarshal(t *testing.T) {
 	assertEqual(t, expected, cfg, "Unmarshal")
 }
 
+func TestSetFieldUint(t *testing.T) {
+	type Config struct {
+		UIntField uint `env:"UINT_FIELD"`
+	}
+
+	var cfg Config
+
+	err := Set("UINT_FIELD", "42")
+	assertNoError(t, err, "Set UINT_FIELD")
+
+	field := reflect.ValueOf(&cfg).Elem().FieldByName("UIntField")
+	err = setField(field, "42")
+	assertNoError(t, err, "setField Uint")
+
+	assertEqual(t, uint(42), cfg.UIntField, "UintField value")
+
+	err = Unset("UINT_FIELD")
+	assertNoError(t, err, "Unset UINT_FIELD")
+}
+
 func TestUnmarshalFloat(t *testing.T) {
 	_ = Set("FLOAT32_VALUE", "3.14")
 	_ = Set("FLOAT64_VALUE", "3.14159")
@@ -288,6 +308,49 @@ func TestUnmarshalUnsupportedKind(t *testing.T) {
 
 	err = Unset("UNSUPPORTED")
 	assertNoError(t, err, "Unset UNSUPPORTED")
+}
+
+func TestUnmarshalSetFieldIntError(t *testing.T) {
+	_ = Set("INVALID_INT", "invalid")
+
+	var cfg struct {
+		InvalidInt int `env:"INVALID_INT"`
+	}
+	err := Unmarshal(&cfg)
+	assertError(t, err, "Unmarshal InvalidInt")
+
+	err = Unset("INVALID_INT")
+	assertNoError(t, err, "Unset INVALID_INT")
+}
+
+func TestUnmarshalSetFieldFloatError(t *testing.T) {
+	_ = Set("INVALID_FLOAT", "invalid")
+
+	var cfg struct {
+		InvalidFloat float64 `env:"INVALID_FLOAT"`
+	}
+	err := Unmarshal(&cfg)
+	assertError(t, err, "Unmarshal InvalidFloat")
+
+	err = Unset("INVALID_FLOAT")
+	assertNoError(t, err, "Unset INVALID_FLOAT")
+}
+
+func TestUnmarshalSetFieldNestedError(t *testing.T) {
+	type NestedConfig struct {
+		NestedField string `env:"NESTED_FIELD,required"`
+	}
+
+	_ = Set("NESTED_FIELD", "") // Setting an empty value to trigger required error
+
+	var cfg struct {
+		Nested NestedConfig `env:""`
+	}
+	err := Unmarshal(&cfg)
+	assertError(t, err, "Unmarshal NestedConfig")
+
+	err = Unset("NESTED_FIELD")
+	assertNoError(t, err, "Unset NESTED_FIELD")
 }
 
 func TestUnmarshalRequired(t *testing.T) {
