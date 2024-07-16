@@ -248,26 +248,6 @@ func TestUnmarshal(t *testing.T) {
 	assertEqual(t, expected, cfg, "Unmarshal")
 }
 
-func TestSetFieldUint(t *testing.T) {
-	type Config struct {
-		UIntField uint `env:"UINT_FIELD"`
-	}
-
-	var cfg Config
-
-	err := Set("UINT_FIELD", "42")
-	assertNoError(t, err, "Set UINT_FIELD")
-
-	field := reflect.ValueOf(&cfg).Elem().FieldByName("UIntField")
-	err = setField(field, "42")
-	assertNoError(t, err, "setField Uint")
-
-	assertEqual(t, uint(42), cfg.UIntField, "UintField value")
-
-	err = Unset("UINT_FIELD")
-	assertNoError(t, err, "Unset UINT_FIELD")
-}
-
 func TestUnmarshalFloat(t *testing.T) {
 	_ = Set("FLOAT32_VALUE", "3.14")
 	_ = Set("FLOAT64_VALUE", "3.14159")
@@ -393,6 +373,26 @@ func TestUnmarshalSetFieldErrors(t *testing.T) {
 	_ = Set("UNSUPPORTED", "invalid")
 	err = Unmarshal(&cfg)
 	assertError(t, err, "Unmarshal Unsupported")
+}
+
+func TestSetFieldUint(t *testing.T) {
+	type Config struct {
+		UIntField uint `env:"UINT_FIELD"`
+	}
+
+	var cfg Config
+
+	err := Set("UINT_FIELD", "42")
+	assertNoError(t, err, "Set UINT_FIELD")
+
+	field := reflect.ValueOf(&cfg).Elem().FieldByName("UIntField")
+	err = setField(field, "42")
+	assertNoError(t, err, "setField Uint")
+
+	assertEqual(t, uint(42), cfg.UIntField, "UintField value")
+
+	err = Unset("UINT_FIELD")
+	assertNoError(t, err, "Unset UINT_FIELD")
 }
 
 func TestSetError(t *testing.T) {
