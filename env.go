@@ -142,9 +142,18 @@ func Unmarshal(cfg interface{}) error {
 
 		parts := strings.Split(tag, ",")
 		keys := strings.Split(parts[0], "|")
-		var defaultValue string
-		if len(parts) > 1 && strings.HasPrefix(parts[1], "default=") {
-			defaultValue = strings.TrimPrefix(parts[1], "default=")
+		var fallbackValue string
+		if len(parts) > 1 {
+			for _, part := range parts[1:] {
+				if strings.HasPrefix(part, "default=") {
+					fallbackValue = strings.TrimPrefix(part, "default=")
+					break
+				}
+				if strings.HasPrefix(part, "fallback=") {
+					fallbackValue = strings.TrimPrefix(part, "fallback=")
+					break
+				}
+			}
 		}
 
 		var value string
@@ -158,7 +167,7 @@ func Unmarshal(cfg interface{}) error {
 		}
 
 		if !found {
-			value = defaultValue
+			value = fallbackValue
 		}
 
 		if err := setField(field, value); err != nil {
