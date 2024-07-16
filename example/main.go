@@ -16,9 +16,9 @@ const (
 
 type DatabaseConfig struct {
 	Host     string `env:"DATABASE_HOST,default=localhost"`
-	Port     int    `env:"DATABASE_PORT|DB_PORT,default=3306"`
+	Port     int    `env:"DATABASE_PORT|DB_PORT,fallback=3306"`
 	Username string `env:"DATABASE_USERNAME,default=root"`
-	Password string `env:"DATABASE_PASSWORD"`
+	Password string `env:"DATABASE_PASSWORD,required"`
 	Database string `env:"DATABASE_NAME"`
 }
 

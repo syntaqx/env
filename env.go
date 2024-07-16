@@ -143,15 +143,17 @@ func Unmarshal(cfg interface{}) error {
 		parts := strings.Split(tag, ",")
 		keys := strings.Split(parts[0], "|")
 		var fallbackValue string
+		required := false
 		if len(parts) > 1 {
 			for _, part := range parts[1:] {
 				if strings.HasPrefix(part, "default=") {
 					fallbackValue = strings.TrimPrefix(part, "default=")
-					break
 				}
 				if strings.HasPrefix(part, "fallback=") {
 					fallbackValue = strings.TrimPrefix(part, "fallback=")
-					break
+				}
+				if part == "required" {
+					required = true
 				}
 			}
 		}
@@ -168,6 +170,10 @@ func Unmarshal(cfg interface{}) error {
 
 		if !found {
 			value = fallbackValue
+		}
+
+		if required && value == "" {
+			return fmt.Errorf("required environment variable %s is not set", keys[0])
 		}
 
 		if err := setField(field, value); err != nil {

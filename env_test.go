@@ -16,7 +16,7 @@ type DatabaseConfig struct {
 	Host     string `env:"DATABASE_HOST,default=localhost"`
 	Port     int    `env:"DATABASE_PORT|DB_PORT,fallback=3306"`
 	Username string `env:"DATABASE_USERNAME,default=root"`
-	Password string `env:"DATABASE_PASSWORD"`
+	Password string `env:"DATABASE_PASSWORD,required"`
 	Database string `env:"DATABASE_NAME"`
 }
 
@@ -204,6 +204,31 @@ func TestUnmarshal(t *testing.T) {
 
 	if !reflect.DeepEqual(cfg, expected) {
 		t.Fatalf("expected %+v, got %+v", expected, cfg)
+	}
+}
+
+func TestUnmarshalRequired(t *testing.T) {
+	type RequiredConfig struct {
+		RequiredVar string `env:"REQUIRED_VAR,required"`
+	}
+
+	var cfg RequiredConfig
+	err := Unmarshal(&cfg)
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+	expectedErr := "required environment variable REQUIRED_VAR is not set"
+	if err.Error() != expectedErr {
+		t.Fatalf("expected error %s, got %s", expectedErr, err.Error())
+	}
+
+	_ = Set("REQUIRED_VAR", "value")
+	err = Unmarshal(&cfg)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if cfg.RequiredVar != "value" {
+		t.Fatalf("expected value, got %s", cfg.RequiredVar)
 	}
 }
 
