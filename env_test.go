@@ -35,18 +35,21 @@ type Config struct {
 }
 
 func assertNoError(t *testing.T, err error, msgAndArgs ...interface{}) {
+	t.Helper()
 	if err != nil {
 		t.Errorf("unexpected error: %v %v", err, msgAndArgs)
 	}
 }
 
 func assertError(t *testing.T, err error, msgAndArgs ...interface{}) {
+	t.Helper()
 	if err == nil {
 		t.Errorf("expected error, got nil %v", msgAndArgs...)
 	}
 }
 
 func assertEqual(t *testing.T, expected, actual interface{}, msgAndArgs ...interface{}) {
+	t.Helper()
 	if !reflect.DeepEqual(expected, actual) {
 		t.Errorf("expected %v, got %v %v", expected, actual, msgAndArgs)
 	}
@@ -210,16 +213,16 @@ func TestUnsetError(t *testing.T) {
 }
 
 func TestUnmarshal(t *testing.T) {
-	_ = Set("DEBUG", "true")
-	_ = Set("PORT", "9090")
-	_ = Set("REDIS_HOST", "host1,host2")
-	_ = Set("REDIS_MODE", "cluster")
-	_ = Set("DATABASE_HOST", "dbhost")
-	_ = Set("DATABASE_PORT", "5432")
-	_ = Set("DATABASE_USERNAME", "admin")
-	_ = Set("DATABASE_PASSWORD", "secret")
-	_ = Set("DATABASE_NAME", "mydb")
-	_ = Set("NESTED_FIELD", "nested_value")
+	setEnvForTest("DEBUG", "true")
+	setEnvForTest("PORT", "9090")
+	setEnvForTest("REDIS_HOST", "host1,host2")
+	setEnvForTest("REDIS_MODE", "cluster")
+	setEnvForTest("DATABASE_HOST", "dbhost")
+	setEnvForTest("DATABASE_PORT", "5432")
+	setEnvForTest("DATABASE_USERNAME", "admin")
+	setEnvForTest("DATABASE_PASSWORD", "secret")
+	setEnvForTest("DATABASE_NAME", "mydb")
+	setEnvForTest("NESTED_FIELD", "nested_value")
 
 	var cfg Config
 	err := Unmarshal(&cfg)
@@ -249,8 +252,8 @@ func TestUnmarshal(t *testing.T) {
 }
 
 func TestUnmarshalFloat(t *testing.T) {
-	_ = Set("FLOAT32_VALUE", "3.14")
-	_ = Set("FLOAT64_VALUE", "3.14159")
+	setEnvForTest("FLOAT32_VALUE", "3.14")
+	setEnvForTest("FLOAT64_VALUE", "3.14159")
 
 	var cfg struct {
 		Float32Value float32 `env:"FLOAT32_VALUE"`
@@ -278,7 +281,7 @@ func TestUnmarshalFloat(t *testing.T) {
 }
 
 func TestUnmarshalUnsupportedKind(t *testing.T) {
-	_ = Set("UNSUPPORTED", "invalid")
+	setEnvForTest("UNSUPPORTED", "invalid")
 
 	var cfg struct {
 		Unsupported complex64 `env:"UNSUPPORTED"`
@@ -291,7 +294,7 @@ func TestUnmarshalUnsupportedKind(t *testing.T) {
 }
 
 func TestUnmarshalSetFieldIntError(t *testing.T) {
-	_ = Set("INVALID_INT", "invalid")
+	setEnvForTest("INVALID_INT", "invalid")
 
 	var cfg struct {
 		InvalidInt int `env:"INVALID_INT"`
@@ -304,7 +307,7 @@ func TestUnmarshalSetFieldIntError(t *testing.T) {
 }
 
 func TestUnmarshalSetFieldFloatError(t *testing.T) {
-	_ = Set("INVALID_FLOAT", "invalid")
+	setEnvForTest("INVALID_FLOAT", "invalid")
 
 	var cfg struct {
 		InvalidFloat float64 `env:"INVALID_FLOAT"`
@@ -321,7 +324,7 @@ func TestUnmarshalSetFieldNestedError(t *testing.T) {
 		NestedField string `env:"NESTED_FIELD,required"`
 	}
 
-	_ = Set("NESTED_FIELD", "") // Setting an empty value to trigger required error
+	setEnvForTest("NESTED_FIELD", "") // Setting an empty value to trigger required error
 
 	var cfg struct {
 		Nested NestedConfig `env:""`
@@ -347,7 +350,7 @@ func TestUnmarshalRequired(t *testing.T) {
 		t.Errorf("expected error %s, got %s", expectedErr, err.Error())
 	}
 
-	_ = Set("REQUIRED_VAR", "value")
+	setEnvForTest("REQUIRED_VAR", "value")
 	err = Unmarshal(&cfg)
 	assertNoError(t, err, "Unmarshal Required")
 	assertEqual(t, "value", cfg.RequiredVar, "Unmarshal Required")
@@ -362,15 +365,15 @@ func TestUnmarshalSetFieldErrors(t *testing.T) {
 
 	var cfg InvalidConfig
 
-	_ = Set("INVALID_UINT", "invalid")
+	setEnvForTest("INVALID_UINT", "invalid")
 	err := Unmarshal(&cfg)
 	assertError(t, err, "Unmarshal InvalidUint")
 
-	_ = Set("INVALID_FLOAT", "invalid")
+	setEnvForTest("INVALID_FLOAT", "invalid")
 	err = Unmarshal(&cfg)
 	assertError(t, err, "Unmarshal InvalidFloat")
 
-	_ = Set("UNSUPPORTED", "invalid")
+	setEnvForTest("UNSUPPORTED", "invalid")
 	err = Unmarshal(&cfg)
 	assertError(t, err, "Unmarshal Unsupported")
 }
@@ -398,4 +401,18 @@ func TestSetFieldUint(t *testing.T) {
 func TestSetError(t *testing.T) {
 	err := Set("", "value")
 	assertError(t, err, "Set")
+}
+
+func setEnvForTest(t *testing.T, name string, value string) {
+	err := Set(name, value)
+	if err != nil {
+		 t.Fatalf("setting env variable %s with %q: %v", name, value, err
+	}
+
+	t.Cleanup(func () {
+		 err = Unset(name) // clean after the test
+		 if err  != nil {
+			  t.Fatalf("unsetting env variable %s: %v", name, err
+		  }
+	})
 }
