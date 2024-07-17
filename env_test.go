@@ -272,12 +272,6 @@ func TestUnmarshalFloat(t *testing.T) {
 
 	assertEqual(t, expected.Float32Value, cfg.Float32Value, "Float32Value")
 	assertEqual(t, expected.Float64Value, cfg.Float64Value, "Float64Value")
-
-	err = Unset("FLOAT32_VALUE")
-	assertNoError(t, err, "Unset FLOAT32_VALUE")
-
-	err = Unset("FLOAT64_VALUE")
-	assertNoError(t, err, "Unset FLOAT64_VALUE")
 }
 
 func TestUnmarshalUnsupportedKind(t *testing.T) {
@@ -288,9 +282,6 @@ func TestUnmarshalUnsupportedKind(t *testing.T) {
 	}
 	err := Unmarshal(&cfg)
 	assertError(t, err, "Unmarshal Unsupported kind")
-
-	err = Unset("UNSUPPORTED")
-	assertNoError(t, err, "Unset UNSUPPORTED")
 }
 
 func TestUnmarshalSetFieldIntError(t *testing.T) {
@@ -301,9 +292,6 @@ func TestUnmarshalSetFieldIntError(t *testing.T) {
 	}
 	err := Unmarshal(&cfg)
 	assertError(t, err, "Unmarshal InvalidInt")
-
-	err = Unset("INVALID_INT")
-	assertNoError(t, err, "Unset INVALID_INT")
 }
 
 func TestUnmarshalSetFieldFloatError(t *testing.T) {
@@ -314,9 +302,6 @@ func TestUnmarshalSetFieldFloatError(t *testing.T) {
 	}
 	err := Unmarshal(&cfg)
 	assertError(t, err, "Unmarshal InvalidFloat")
-
-	err = Unset("INVALID_FLOAT")
-	assertNoError(t, err, "Unset INVALID_FLOAT")
 }
 
 func TestUnmarshalSetFieldNestedError(t *testing.T) {
@@ -331,9 +316,6 @@ func TestUnmarshalSetFieldNestedError(t *testing.T) {
 	}
 	err := Unmarshal(&cfg)
 	assertError(t, err, "Unmarshal NestedConfig")
-
-	err = Unset("NESTED_FIELD")
-	assertNoError(t, err, "Unset NESTED_FIELD")
 }
 
 func TestUnmarshalRequired(t *testing.T) {
@@ -393,9 +375,6 @@ func TestSetFieldUint(t *testing.T) {
 	assertNoError(t, err, "setField Uint")
 
 	assertEqual(t, uint(42), cfg.UIntField, "UintField value")
-
-	err = Unset("UINT_FIELD")
-	assertNoError(t, err, "Unset UINT_FIELD")
 }
 
 func TestSetError(t *testing.T) {
@@ -404,6 +383,8 @@ func TestSetError(t *testing.T) {
 }
 
 func setEnvForTest(t *testing.T, name string, value string) {
+	t.Helper()
+
 	err := Set(name, value)
 	assertNoError(t, err, "Set")
 
