@@ -65,20 +65,19 @@ func GetBool(key string) bool {
 // GetBoolWithFallback returns the value of an environment variable as a boolean
 // or a fallback value if the environment variable is not set.
 func GetBoolWithFallback(key string, fallback bool) bool {
-	value := GetBool(key)
-	if !value && os.Getenv(key) == "" {
-		return fallback
+	if value, ok := Lookup(key); ok {
+		return parseBool(value)
 	}
-	return value
+	return fallback
 }
 
 // GetInt returns the value of an environment variable as an integer.
 func GetInt(key string) (int, error) {
-	value, err := strconv.Atoi(Get(key))
-	if err != nil {
-		return 0, fmt.Errorf("error converting %s to integer: %w", key, err)
+	value := Get(key)
+	if value == "" {
+		return 0, fmt.Errorf("environment variable %s not set", key)
 	}
-	return value, nil
+	return strconv.Atoi(value)
 }
 
 // GetIntWithFallback returns the value of an environment variable as an integer
@@ -93,11 +92,11 @@ func GetIntWithFallback(key string, fallback int) int {
 
 // GetFloat returns the value of an environment variable as a float.
 func GetFloat(key string) (float64, error) {
-	value, err := strconv.ParseFloat(Get(key), 64)
-	if err != nil {
-		return 0, fmt.Errorf("error converting %s to float: %w", key, err)
+	value := Get(key)
+	if value == "" {
+		return 0, fmt.Errorf("environment variable %s not set", key)
 	}
-	return value, nil
+	return strconv.ParseFloat(value, 64)
 }
 
 // GetFloatWithFallback returns the value of an environment variable as a float
@@ -131,8 +130,13 @@ func parseBool(value string) bool {
 }
 
 // Unmarshal reads environment variables into a struct based on `env` tags.
-func Unmarshal(cfg interface{}) error {
-	v := reflect.ValueOf(cfg).Elem()
+func Unmarshal(data any) error {
+	return unmarshalWithPrefix(data, "")
+}
+
+// unmarshalWithPrefix unmarshals environment variables into a struct with a given prefix.
+func unmarshalWithPrefix(data any, prefix string) error {
+	v := reflect.ValueOf(data).Elem()
 	t := v.Type()
 
 	for i := 0; i < v.NumField(); i++ {
@@ -140,37 +144,28 @@ func Unmarshal(cfg interface{}) error {
 		fieldType := t.Field(i)
 		tag := fieldType.Tag.Get("env")
 
-		if tag == "" {
-			if field.Kind() == reflect.Struct {
-				if err := Unmarshal(field.Addr().Interface()); err != nil {
-					return err
-				}
+		// Handle nested structs with optional prefixes
+		if field.Kind() == reflect.Struct {
+			newPrefix := prefix
+			if tag != "" {
+				newPrefix = prefix + tag + "_"
+			}
+			if err := unmarshalWithPrefix(field.Addr().Interface(), newPrefix); err != nil {
+				return err
 			}
 			continue
 		}
 
-		parts := strings.Split(tag, ",")
-		keys := strings.Split(parts[0], "|")
-		var fallbackValue string
-		required := false
-		if len(parts) > 1 {
-			for _, part := range parts[1:] {
-				if strings.HasPrefix(part, "default=") {
-					fallbackValue = strings.TrimPrefix(part, "default=")
-				}
-				if strings.HasPrefix(part, "fallback=") {
-					fallbackValue = strings.TrimPrefix(part, "fallback=")
-				}
-				if part == "required" {
-					required = true
-				}
-			}
+		if tag == "" {
+			continue
 		}
 
+		tagOpts := parseTag(tag)
 		var value string
 		var found bool
-		for _, key := range keys {
-			if val, ok := Lookup(key); ok {
+		for _, key := range tagOpts.keys {
+			fullKey := prefix + key
+			if val, ok := Lookup(fullKey); ok {
 				value = val
 				found = true
 				break
@@ -178,11 +173,11 @@ func Unmarshal(cfg interface{}) error {
 		}
 
 		if !found {
-			value = fallbackValue
+			value = tagOpts.fallback
 		}
 
-		if required && value == "" {
-			return fmt.Errorf("required environment variable %s is not set", keys[0])
+		if tagOpts.required && value == "" {
+			return fmt.Errorf("required environment variable %s is not set", tagOpts.keys[0])
 		}
 
 		if err := setField(field, value); err != nil {
@@ -193,6 +188,41 @@ func Unmarshal(cfg interface{}) error {
 	return nil
 }
 
+// tagOptions holds parsed tag options
+type tagOptions struct {
+	keys     []string
+	fallback string
+	required bool
+}
+
+// parseTag parses the struct tag into tagOptions
+func parseTag(tag string) tagOptions {
+	parts := strings.Split(tag, ",")
+	keys := strings.Split(parts[0], "|")
+	var fallbackValue string
+	required := false
+	if len(parts) > 1 {
+		for _, part := range parts[1:] {
+			if strings.HasPrefix(part, "default=") {
+				fallbackValue = strings.TrimPrefix(part, "default=")
+			}
+			if strings.HasPrefix(part, "fallback=") {
+				fallbackValue = strings.TrimPrefix(part, "fallback=")
+			}
+			if part == "required" {
+				required = true
+			}
+		}
+	}
+
+	return tagOptions{
+		keys:     keys,
+		fallback: fallbackValue,
+		required: required,
+	}
+}
+
+// setField sets the value of a struct field based on its type
 func setField(field reflect.Value, value string) error {
 	switch field.Kind() {
 	case reflect.String:
