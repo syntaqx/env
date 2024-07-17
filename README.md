@@ -2,6 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/syntaqx/env.svg)](https://pkg.go.dev/github.com/syntaqx/env)
 [![codecov](https://codecov.io/gh/syntaqx/env/graph/badge.svg?token=m4bBKy3UG3)](https://codecov.io/gh/syntaqx/env)
+[![Go Report Card](https://goreportcard.com/badge/github.com/syntaqx/env)](https://goreportcard.com/report/github.com/syntaqx/env)
 
 `env` is an environment variable utility package for Go.
 
