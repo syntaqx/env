@@ -213,16 +213,16 @@ func TestUnsetError(t *testing.T) {
 }
 
 func TestUnmarshal(t *testing.T) {
-	setEnvForTest("DEBUG", "true")
-	setEnvForTest("PORT", "9090")
-	setEnvForTest("REDIS_HOST", "host1,host2")
-	setEnvForTest("REDIS_MODE", "cluster")
-	setEnvForTest("DATABASE_HOST", "dbhost")
-	setEnvForTest("DATABASE_PORT", "5432")
-	setEnvForTest("DATABASE_USERNAME", "admin")
-	setEnvForTest("DATABASE_PASSWORD", "secret")
-	setEnvForTest("DATABASE_NAME", "mydb")
-	setEnvForTest("NESTED_FIELD", "nested_value")
+	setEnvForTest(t, "DEBUG", "true")
+	setEnvForTest(t, "PORT", "9090")
+	setEnvForTest(t, "REDIS_HOST", "host1,host2")
+	setEnvForTest(t, "REDIS_MODE", "cluster")
+	setEnvForTest(t, "DATABASE_HOST", "dbhost")
+	setEnvForTest(t, "DATABASE_PORT", "5432")
+	setEnvForTest(t, "DATABASE_USERNAME", "admin")
+	setEnvForTest(t, "DATABASE_PASSWORD", "secret")
+	setEnvForTest(t, "DATABASE_NAME", "mydb")
+	setEnvForTest(t, "NESTED_FIELD", "nested_value")
 
 	var cfg Config
 	err := Unmarshal(&cfg)
@@ -252,8 +252,8 @@ func TestUnmarshal(t *testing.T) {
 }
 
 func TestUnmarshalFloat(t *testing.T) {
-	setEnvForTest("FLOAT32_VALUE", "3.14")
-	setEnvForTest("FLOAT64_VALUE", "3.14159")
+	setEnvForTest(t, "FLOAT32_VALUE", "3.14")
+	setEnvForTest(t, "FLOAT64_VALUE", "3.14159")
 
 	var cfg struct {
 		Float32Value float32 `env:"FLOAT32_VALUE"`
@@ -281,7 +281,7 @@ func TestUnmarshalFloat(t *testing.T) {
 }
 
 func TestUnmarshalUnsupportedKind(t *testing.T) {
-	setEnvForTest("UNSUPPORTED", "invalid")
+	setEnvForTest(t, "UNSUPPORTED", "invalid")
 
 	var cfg struct {
 		Unsupported complex64 `env:"UNSUPPORTED"`
@@ -294,7 +294,7 @@ func TestUnmarshalUnsupportedKind(t *testing.T) {
 }
 
 func TestUnmarshalSetFieldIntError(t *testing.T) {
-	setEnvForTest("INVALID_INT", "invalid")
+	setEnvForTest(t, "INVALID_INT", "invalid")
 
 	var cfg struct {
 		InvalidInt int `env:"INVALID_INT"`
@@ -307,7 +307,7 @@ func TestUnmarshalSetFieldIntError(t *testing.T) {
 }
 
 func TestUnmarshalSetFieldFloatError(t *testing.T) {
-	setEnvForTest("INVALID_FLOAT", "invalid")
+	setEnvForTest(t, "INVALID_FLOAT", "invalid")
 
 	var cfg struct {
 		InvalidFloat float64 `env:"INVALID_FLOAT"`
@@ -324,7 +324,7 @@ func TestUnmarshalSetFieldNestedError(t *testing.T) {
 		NestedField string `env:"NESTED_FIELD,required"`
 	}
 
-	setEnvForTest("NESTED_FIELD", "") // Setting an empty value to trigger required error
+	setEnvForTest(t, "NESTED_FIELD", "") // Setting an empty value to trigger required error
 
 	var cfg struct {
 		Nested NestedConfig `env:""`
@@ -350,7 +350,7 @@ func TestUnmarshalRequired(t *testing.T) {
 		t.Errorf("expected error %s, got %s", expectedErr, err.Error())
 	}
 
-	setEnvForTest("REQUIRED_VAR", "value")
+	setEnvForTest(t, "REQUIRED_VAR", "value")
 	err = Unmarshal(&cfg)
 	assertNoError(t, err, "Unmarshal Required")
 	assertEqual(t, "value", cfg.RequiredVar, "Unmarshal Required")
@@ -365,15 +365,15 @@ func TestUnmarshalSetFieldErrors(t *testing.T) {
 
 	var cfg InvalidConfig
 
-	setEnvForTest("INVALID_UINT", "invalid")
+	setEnvForTest(t, "INVALID_UINT", "invalid")
 	err := Unmarshal(&cfg)
 	assertError(t, err, "Unmarshal InvalidUint")
 
-	setEnvForTest("INVALID_FLOAT", "invalid")
+	setEnvForTest(t, "INVALID_FLOAT", "invalid")
 	err = Unmarshal(&cfg)
 	assertError(t, err, "Unmarshal InvalidFloat")
 
-	setEnvForTest("UNSUPPORTED", "invalid")
+	setEnvForTest(t, "UNSUPPORTED", "invalid")
 	err = Unmarshal(&cfg)
 	assertError(t, err, "Unmarshal Unsupported")
 }
@@ -405,14 +405,10 @@ func TestSetError(t *testing.T) {
 
 func setEnvForTest(t *testing.T, name string, value string) {
 	err := Set(name, value)
-	if err != nil {
-		 t.Fatalf("setting env variable %s with %q: %v", name, value, err
-	}
+	assertNoError(t, err, "Set")
 
-	t.Cleanup(func () {
-		 err = Unset(name) // clean after the test
-		 if err  != nil {
-			  t.Fatalf("unsetting env variable %s: %v", name, err
-		  }
+	t.Cleanup(func() {
+		err = Unset(name) // clean after the test
+		assertNoError(t, err, "Unset")
 	})
 }
