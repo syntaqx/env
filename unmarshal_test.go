@@ -92,9 +92,6 @@ func TestUnmarshalDefaultsFromTags(t *testing.T) {
 		Port int    `env:"PORT"`
 	}
 
-	Unset("HOST")
-	Unset("PORT")
-
 	cfg := &Config{}
 
 	err := Unmarshal(cfg)
@@ -113,9 +110,6 @@ func TestUnmarshalDefaultsFromCodeAndTags(t *testing.T) {
 		Host string `env:"HOST,default=localhost"`
 		Port int    `env:"PORT"`
 	}
-
-	Unset("HOST")
-	Unset("PORT")
 
 	cfg := &Config{
 		Host: "syntaqx.com",
