@@ -273,7 +273,7 @@ when an environment variable is not set:
 type Config struct {
     Host string `env:"HOST,default=localhost"`
     Port string `env:"PORT,default=8080"`
-    Address string `env:"ADDRESS,expand,default=${Host}:${Port}"`
+    Address string `env:"ADDRESS,expand,default=${HOST}:${PORT}"`
 }
 ```
 
