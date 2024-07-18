@@ -10,7 +10,7 @@ type Config struct {
 	IntField    int      `env:"INT_FIELD,default=123"`
 	BoolField   bool     `env:"BOOL_FIELD,default=true"`
 	FloatField  float64  `env:"FLOAT_FIELD,default=1.23"`
-	SliceField  []string `env:"SLICE_FIELD,default=item1"`
+	SliceField  []string `env:"SLICE_FIELD,default=[item1,item2,item3]"`
 }
 
 type NestedConfig struct {
@@ -42,6 +42,17 @@ func TestUnmarshal(t *testing.T) {
 	}
 
 	assertEqual(t, expected, cfg, "Unmarshal")
+}
+
+func TestUnmarshalWithDefaults(t *testing.T) {
+	var cfg Config
+	err := Unmarshal(&cfg)
+	assertNoError(t, err)
+	assertEqual(t, "default_value", cfg.StringField)
+	assertEqual(t, 123, cfg.IntField)
+	assertEqual(t, true, cfg.BoolField)
+	assertEqual(t, 1.23, cfg.FloatField)
+	assertEqual(t, []string{"item1", "item2", "item3"}, cfg.SliceField)
 }
 
 func TestUnmarshalNested(t *testing.T) {

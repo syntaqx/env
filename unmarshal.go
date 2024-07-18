@@ -3,6 +3,7 @@ package env
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -75,22 +76,26 @@ type tagOptions struct {
 
 // parseTag parses the struct tag into tagOptions
 func parseTag(tag string) tagOptions {
-	parts := strings.Split(tag, ",")
+	parts := strings.SplitN(tag, ",", 2)
 	keys := strings.Split(parts[0], "|")
 	var fallbackValue string
 	required := false
 	if len(parts) > 1 {
-		for _, part := range parts[1:] {
-			if strings.HasPrefix(part, "default=") {
-				fallbackValue = strings.TrimPrefix(part, "default=")
+		extraParts := parts[1]
+		if strings.Contains(extraParts, "default=[") || strings.Contains(extraParts, "fallback=[") {
+			re := regexp.MustCompile(`(?:default|fallback)=\[(.*?)\]`)
+			matches := re.FindStringSubmatch(extraParts)
+			if len(matches) > 1 {
+				fallbackValue = matches[1]
 			}
-			if strings.HasPrefix(part, "fallback=") {
-				fallbackValue = strings.TrimPrefix(part, "fallback=")
-			}
-			if part == "required" {
-				required = true
+		} else if strings.Contains(extraParts, "default=") || strings.Contains(extraParts, "fallback=") {
+			re := regexp.MustCompile(`(?:default|fallback)=([^,]+)`)
+			matches := re.FindStringSubmatch(extraParts)
+			if len(matches) > 1 {
+				fallbackValue = matches[1]
 			}
 		}
+		required = strings.Contains(extraParts, "required")
 	}
 
 	return tagOptions{
@@ -100,7 +105,6 @@ func parseTag(tag string) tagOptions {
 	}
 }
 
-// setField sets the value of a struct field based on its type
 // setField sets the value of a struct field based on its type
 func setField(field reflect.Value, value string) error {
 	switch field.Kind() {
