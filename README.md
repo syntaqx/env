@@ -157,6 +157,36 @@ func main() {
 }
 ```
 
+### Slice Types Defaults
+
+When using slice types, if you are declaring a single value as the default you
+can use the `default` tag as normal:
+
+```go
+type Config struct {
+	Hosts []string `env:"HOSTS,default=localhost"`
+}
+```
+
+However if you want to declare multiple values as the default, you must enclose
+the values in square brackets:
+
+```go
+type Config struct {
+	Hosts []string `env:"HOSTS,default=[localhost,localhost2]
+}
+```
+
+This is necessary as the pacakge uses commas as a delimiter to split the struct
+tag options, and without the square brackets it would split the values into
+multiple tags.
+
+```go
+type Config struct {
+	Hosts []string `env:"HOSTS,default=[localhost,localhost2],required"
+}
+```
+
 ## Contributing
 
 Feel free to open issues or contribute to the project. Contributions are always
