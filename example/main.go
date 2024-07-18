@@ -29,7 +29,9 @@ type DatabaseConfig struct {
 
 type Config struct {
 	Debug    bool           `env:"DEBUG"`
+	Host     string         `env:"HOST,default=localhost"`
 	Port     string         `env:"PORT,default=8080"`
+	Address  string         `env:"ADDRESS,default=${HOST}:$PORT,expand"`
 	Roles    []string       `env:"ROLES,default=[admin,editor]"`
 	Database DatabaseConfig `env:"DATABASE"`
 	Redis    RedisConfig

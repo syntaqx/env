@@ -238,6 +238,52 @@ if err := env.Unmarshal(&cfg); err != nil {
 // { "Username": "test", "Password": "password123" }
 ```
 
+### Expand variables
+
+The `expand` tag option can be used to indicate that the value of the variable
+should be expanded (in either `${var}` or `$var` format) before being set.
+
+```go
+type Config struct {
+    Username string `env:"USERNAME,expand"`
+    Password string `env:"PASSWORD,expand"`
+}
+```
+
+This works great with the `default` tag option:
+
+```go
+type Config struct {
+    Address string `env:"ADDRESS,expand,default=${HOST}:${PORT}"`
+}
+```
+
+Which results in:
+
+```bash
+HOST=localhost PORT=8080 go run main.go
+{Address:localhost:8080}
+```
+
+Additionally, default values can be referenced from other struct fields.
+Allowing you to chain default values rather than falling back to an empty value
+when an environment variable is not set:
+
+```go
+type Config struct {
+    Host string `env:"HOST,default=localhost"`
+    Port string `env:"PORT,default=8080"`
+    Address string `env:"ADDRESS,expand,default=${Host}:${Port}"`
+}
+```
+
+Which results in:
+
+```bash
+go run main.go
+{Host:localhost Port:8080 Address:localhost:8080}
+```
+
 ## Contributing
 
 Feel free to open issues or contribute to the project. Contributions are always

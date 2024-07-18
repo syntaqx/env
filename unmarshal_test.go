@@ -663,3 +663,117 @@ func TestReadFileContentError(t *testing.T) {
 		t.Errorf("expected error to start with %s, got %s", expectedErrPrefix, err.Error())
 	}
 }
+
+func TestUnmarshalExpand(t *testing.T) {
+	setEnvForTest(t, "HOST", "localhost")
+	setEnvForTest(t, "PORT", "8080")
+	setEnvForTest(t, "BASE_URL", "http://${HOST}:${PORT}")
+
+	type Config struct {
+		BaseURL string `env:"BASE_URL,expand"`
+	}
+
+	var cfg Config
+	err := Unmarshal(&cfg)
+	assertNoError(t, err, "Unmarshal with expand")
+
+	expected := Config{
+		BaseURL: "http://localhost:8080",
+	}
+
+	assertEqual(t, expected, cfg, "UnmarshalExpand")
+}
+
+func TestUnmarshalExpandWithDefault(t *testing.T) {
+	setEnvForTest(t, "HOST", "localhost")
+	setEnvForTest(t, "PORT", "8080")
+
+	type Config struct {
+		BaseURL string `env:"BASE_URL,default=http://${HOST}:${PORT}/api,expand"`
+	}
+
+	var cfg Config
+	err := Unmarshal(&cfg)
+	assertNoError(t, err, "Unmarshal with expand and default")
+
+	expected := Config{
+		BaseURL: "http://localhost:8080/api",
+	}
+
+	assertEqual(t, expected, cfg, "UnmarshalExpandWithDefault")
+}
+
+func TestUnmarshalExpandWithMissingEnv(t *testing.T) {
+	type Config struct {
+		BaseURL string `env:"BASE_URL,default=http://${HOST}:${PORT}/api,expand"`
+	}
+
+	var cfg Config
+	err := Unmarshal(&cfg)
+	assertNoError(t, err, "Unmarshal with expand and missing env variables")
+
+	expected := Config{
+		BaseURL: "http://:/api", // Expanded with empty strings for missing HOST and PORT
+	}
+
+	assertEqual(t, expected, cfg, "UnmarshalExpandWithMissingEnv")
+}
+
+func TestGetDefaultFromStructWithFallback(t *testing.T) {
+	type Config struct {
+		Host    string `env:"HOST,default=localhost"`
+		Port    string `env:"PORT,default=8080"`
+		Address string `env:"ADDRESS,default=${HOST}:${PORT},expand"`
+	}
+
+	var cfg Config
+	defaultHost := getDefaultFromStruct("HOST", &cfg)
+	defaultPort := getDefaultFromStruct("PORT", &cfg)
+
+	if defaultHost != "localhost" {
+		t.Errorf("expected default host to be 'localhost', got '%s'", defaultHost)
+	}
+
+	if defaultPort != "8080" {
+		t.Errorf("expected default port to be '8080', got '%s'", defaultPort)
+	}
+}
+
+func TestGetDefaultFromStructWithNestedStruct(t *testing.T) {
+	type NestedConfig struct {
+		NestedField string `env:"NESTED_FIELD,default=nested_default"`
+	}
+
+	type Config struct {
+		Host   string       `env:"HOST,default=localhost"`
+		Nested NestedConfig `env:"NESTED"`
+	}
+
+	var cfg Config
+	defaultNestedField := getDefaultFromStruct("NESTED_FIELD", &cfg)
+
+	if defaultNestedField != "nested_default" {
+		t.Errorf("expected default nested field to be 'nested_default', got '%s'", defaultNestedField)
+	}
+}
+
+func TestExpandVariables(t *testing.T) {
+	setEnvForTest(t, "HOST", "localhost")
+	setEnvForTest(t, "PORT", "8080")
+
+	type Config struct {
+		BaseURL1 string `env:"BASE_URL1,default=http://${HOST}:${PORT}/api,expand"`
+		BaseURL2 string `env:"BASE_URL2,default=http://$HOST:$PORT/api,expand"`
+	}
+
+	var cfg Config
+	err := Unmarshal(&cfg)
+	assertNoError(t, err, "Unmarshal with expand and default")
+
+	expected := Config{
+		BaseURL1: "http://localhost:8080/api",
+		BaseURL2: "http://localhost:8080/api",
+	}
+
+	assertEqual(t, expected, cfg, "ExpandVariables")
+}

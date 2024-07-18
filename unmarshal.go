@@ -36,7 +36,7 @@ func unmarshalWithPrefix(data interface{}, prefix string) error {
 			continue
 		}
 
-		if err := unmarshalField(field, tag, prefix); err != nil {
+		if err := unmarshalField(field, tag, prefix, data); err != nil {
 			return err
 		}
 	}
@@ -54,7 +54,7 @@ func unmarshalStruct(data interface{}, prefix, tag string) error {
 }
 
 // unmarshalField handles unmarshaling individual fields based on tags
-func unmarshalField(field reflect.Value, tag string, prefix string) error {
+func unmarshalField(field reflect.Value, tag string, prefix string, structPtr interface{}) error {
 	tagOpts := parseTag(tag)
 	value, found := findFieldValue(tagOpts.keys, prefix)
 
@@ -67,8 +67,12 @@ func unmarshalField(field reflect.Value, tag string, prefix string) error {
 		found = true
 	}
 
-	if !found {
+	if !found && tagOpts.fallback != "" {
 		value = tagOpts.fallback
+	}
+
+	if tagOpts.expand {
+		value = expandVariables(value, structPtr)
 	}
 
 	if tagOpts.required && value == "" {
@@ -80,6 +84,58 @@ func unmarshalField(field reflect.Value, tag string, prefix string) error {
 	}
 
 	return nil
+}
+
+// expandVariables replaces placeholders with actual environment variable values or defaults if not set.
+func expandVariables(value string, structPtr interface{}) string {
+	// Handle both ${var} and $var syntax
+	re := regexp.MustCompile(`\$\{([^}]+)\}|\$([A-Za-z_][A-Za-z0-9_]*)`)
+	matches := re.FindAllStringSubmatch(value, -1)
+
+	for _, match := range matches {
+		var envVar string
+		if match[1] != "" {
+			envVar = match[1] // ${var} syntax
+		} else {
+			envVar = match[2] // $var syntax
+		}
+
+		envValue, ok := Lookup(envVar) // Lookup the environment variable; use default if not set
+		if !ok {
+			envValue = getDefaultFromStruct(envVar, structPtr)
+		}
+		value = strings.Replace(value, match[0], envValue, -1)
+	}
+
+	return value
+}
+
+// getDefaultFromStruct retrieves the default value from the struct if available
+func getDefaultFromStruct(fieldName string, structPtr interface{}) string {
+	v := reflect.ValueOf(structPtr).Elem()
+	t := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		fieldType := t.Field(i)
+		tag := fieldType.Tag.Get("env")
+		tagOpts := parseTag(tag)
+
+		if tagOpts.keys[0] == fieldName {
+			if tagOpts.fallback != "" {
+				return tagOpts.fallback
+			}
+		}
+		// Handle nested structs
+		if fieldType.Type.Kind() == reflect.Struct {
+			nestedStructPtr := v.Field(i).Addr().Interface()
+			nestedValue := getDefaultFromStruct(fieldName, nestedStructPtr)
+			if nestedValue != "" {
+				return nestedValue
+			}
+		}
+	}
+
+	return ""
 }
 
 // Helper function to read file content
@@ -108,6 +164,7 @@ type tagOptions struct {
 	fallback string
 	required bool
 	file     bool
+	expand   bool
 }
 
 // parseTag parses the struct tag into tagOptions
@@ -117,6 +174,7 @@ func parseTag(tag string) tagOptions {
 	var fallbackValue string
 	required := false
 	file := false
+	expand := false
 
 	if len(parts) > 1 {
 		extraParts := parts[1]
@@ -132,12 +190,12 @@ func parseTag(tag string) tagOptions {
 				if !inBrackets {
 					part := extraParts[start:i]
 					start = i + 1
-					parsePart(part, &fallbackValue, &required, &file)
+					parsePart(part, &fallbackValue, &required, &file, &expand)
 				}
 			}
 		}
 		part := extraParts[start:]
-		parsePart(part, &fallbackValue, &required, &file)
+		parsePart(part, &fallbackValue, &required, &file, &expand)
 	}
 
 	return tagOptions{
@@ -145,10 +203,11 @@ func parseTag(tag string) tagOptions {
 		fallback: fallbackValue,
 		required: required,
 		file:     file,
+		expand:   expand,
 	}
 }
 
-func parsePart(part string, fallbackValue *string, required *bool, file *bool) {
+func parsePart(part string, fallbackValue *string, required *bool, file *bool, expand *bool) {
 	if strings.Contains(part, "default=[") || strings.Contains(part, "fallback=[") {
 		re := regexp.MustCompile(`(?:default|fallback)=\[(.*?)]`)
 		matches := re.FindStringSubmatch(part)
@@ -165,6 +224,8 @@ func parsePart(part string, fallbackValue *string, required *bool, file *bool) {
 		*required = true
 	} else if strings.TrimSpace(part) == "file" {
 		*file = true
+	} else if strings.TrimSpace(part) == "expand" {
+		*expand = true
 	}
 }
 
