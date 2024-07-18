@@ -6,11 +6,12 @@ import (
 )
 
 type Config struct {
-	StringField string   `env:"STRING_FIELD,default=default_value"`
-	IntField    int      `env:"INT_FIELD,default=123"`
-	BoolField   bool     `env:"BOOL_FIELD,default=true"`
-	FloatField  float64  `env:"FLOAT_FIELD,default=1.23"`
-	SliceField  []string `env:"SLICE_FIELD,default=[item1,item2,item3]"`
+	StringField              string   `env:"STRING_FIELD,default=default_value"`
+	IntField                 int      `env:"INT_FIELD,default=123"`
+	BoolField                bool     `env:"BOOL_FIELD,default=true"`
+	FloatField               float64  `env:"FLOAT_FIELD,default=1.23"`
+	StringSliceField         []string `env:"SLICE_FIELD,default=item1"`
+	StringSliceFieldMultiple []string `env:"SLICE_FIELD_MULTI,default=[item1,item2,item3]"`
 }
 
 type NestedConfig struct {
@@ -28,17 +29,19 @@ func TestUnmarshal(t *testing.T) {
 	setEnvForTest(t, "BOOL_FIELD", "false")
 	setEnvForTest(t, "FLOAT_FIELD", "4.56")
 	setEnvForTest(t, "SLICE_FIELD", "item1,item2")
+	setEnvForTest(t, "SLICE_FIELD_MULTI", "item1,item2,item3,item4")
 
 	var cfg Config
 	err := Unmarshal(&cfg)
 	assertNoError(t, err, "Unmarshal")
 
 	expected := Config{
-		StringField: "string_value",
-		IntField:    456,
-		BoolField:   false,
-		FloatField:  4.56,
-		SliceField:  []string{"item1", "item2"},
+		StringField:              "string_value",
+		IntField:                 456,
+		BoolField:                false,
+		FloatField:               4.56,
+		StringSliceField:         []string{"item1", "item2"},
+		StringSliceFieldMultiple: []string{"item1", "item2", "item3", "item4"},
 	}
 
 	assertEqual(t, expected, cfg, "Unmarshal")
@@ -52,7 +55,8 @@ func TestUnmarshalWithDefaults(t *testing.T) {
 	assertEqual(t, 123, cfg.IntField)
 	assertEqual(t, true, cfg.BoolField)
 	assertEqual(t, 1.23, cfg.FloatField)
-	assertEqual(t, []string{"item1", "item2", "item3"}, cfg.SliceField)
+	assertEqual(t, []string{"item1"}, cfg.StringSliceField)
+	assertEqual(t, []string{"item1", "item2", "item3"}, cfg.StringSliceFieldMultiple)
 }
 
 func TestUnmarshalNested(t *testing.T) {
@@ -61,6 +65,7 @@ func TestUnmarshalNested(t *testing.T) {
 	setEnvForTest(t, "BOOL_FIELD", "false")
 	setEnvForTest(t, "FLOAT_FIELD", "4.56")
 	setEnvForTest(t, "SLICE_FIELD", "item1,item2")
+	setEnvForTest(t, "SLICE_FIELD_MULTI", "item1,item2,item3,item4")
 	setEnvForTest(t, "NESTED_NESTED_FIELD", "nested_value")
 
 	var cfg ParentConfig
@@ -69,11 +74,12 @@ func TestUnmarshalNested(t *testing.T) {
 
 	expected := ParentConfig{
 		Config: Config{
-			StringField: "string_value",
-			IntField:    456,
-			BoolField:   false,
-			FloatField:  4.56,
-			SliceField:  []string{"item1", "item2"},
+			StringField:              "string_value",
+			IntField:                 456,
+			BoolField:                false,
+			FloatField:               4.56,
+			StringSliceField:         []string{"item1", "item2"},
+			StringSliceFieldMultiple: []string{"item1", "item2", "item3", "item4"},
 		},
 		Nested: NestedConfig{
 			NestedField: "nested_value",
