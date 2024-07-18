@@ -1,7 +1,9 @@
 package env
 
 import (
+	"os"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -597,5 +599,73 @@ func TestIsZeroValue(t *testing.T) {
 				t.Errorf("isZeroValue() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestUnmarshalFileOption(t *testing.T) {
+	type Config struct {
+		Host string `env:"HOST,default=localhost"`
+		Port int    `env:"PORT"`
+		Key  string `env:"KEY,file"`
+	}
+
+	// Create a temporary file with the content
+	fileContent := "file_content"
+	tmpFile, err := os.CreateTemp("", "example")
+	assertNoError(t, err, "CreateTemp")
+	defer os.Remove(tmpFile.Name())
+
+	_, err = tmpFile.WriteString(fileContent)
+	assertNoError(t, err, "WriteString")
+
+	err = tmpFile.Close()
+	assertNoError(t, err, "Close")
+
+	setEnvForTest(t, "HOST", "envhost")
+	setEnvForTest(t, "PORT", "8080")
+	setEnvForTest(t, "KEY", tmpFile.Name())
+
+	cfg := &Config{
+		Host: "syntaqx.com",
+		Port: 3306,
+	}
+
+	err = Unmarshal(cfg)
+	assertNoError(t, err, "Unmarshal")
+
+	expected := Config{
+		Host: "envhost",
+		Port: 8080,
+		Key:  fileContent,
+	}
+
+	assertEqual(t, expected, *cfg, "UnmarshalFileOption")
+}
+
+func TestUnmarshalFieldFileError(t *testing.T) {
+	type Config struct {
+		Key string `env:"KEY,file"`
+	}
+
+	// Set an invalid file path
+	setEnvForTest(t, "KEY", "/invalid/path/to/file")
+
+	var cfg Config
+	err := Unmarshal(&cfg)
+	assertError(t, err, "UnmarshalFieldFileError")
+
+	expectedErrPrefix := "open /invalid/path/to/file"
+	if err != nil && !strings.HasPrefix(err.Error(), expectedErrPrefix) {
+		t.Errorf("expected error to start with %s, got %s", expectedErrPrefix, err.Error())
+	}
+}
+
+func TestReadFileContentError(t *testing.T) {
+	_, err := readFileContent("/invalid/path/to/file")
+	assertError(t, err, "readFileContentError")
+
+	expectedErrPrefix := "open /invalid/path/to/file"
+	if err != nil && !strings.HasPrefix(err.Error(), expectedErrPrefix) {
+		t.Errorf("expected error to start with %s, got %s", expectedErrPrefix, err.Error())
 	}
 }

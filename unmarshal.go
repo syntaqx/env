@@ -2,6 +2,7 @@ package env
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -57,6 +58,15 @@ func unmarshalField(field reflect.Value, tag string, prefix string) error {
 	tagOpts := parseTag(tag)
 	value, found := findFieldValue(tagOpts.keys, prefix)
 
+	if tagOpts.file && found {
+		fileContent, err := readFileContent(value)
+		if err != nil {
+			return err
+		}
+		value = fileContent
+		found = true
+	}
+
 	if !found {
 		value = tagOpts.fallback
 	}
@@ -70,6 +80,15 @@ func unmarshalField(field reflect.Value, tag string, prefix string) error {
 	}
 
 	return nil
+}
+
+// Helper function to read file content
+func readFileContent(filePath string) (string, error) {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
 }
 
 // findFieldValue tries to find environment variable value based on keys
@@ -88,6 +107,7 @@ type tagOptions struct {
 	keys     []string
 	fallback string
 	required bool
+	file     bool
 }
 
 // parseTag parses the struct tag into tagOptions
@@ -96,6 +116,7 @@ func parseTag(tag string) tagOptions {
 	keys := strings.Split(parts[0], "|")
 	var fallbackValue string
 	required := false
+	file := false
 
 	if len(parts) > 1 {
 		extraParts := parts[1]
@@ -111,22 +132,23 @@ func parseTag(tag string) tagOptions {
 				if !inBrackets {
 					part := extraParts[start:i]
 					start = i + 1
-					parsePart(part, &fallbackValue, &required)
+					parsePart(part, &fallbackValue, &required, &file)
 				}
 			}
 		}
 		part := extraParts[start:]
-		parsePart(part, &fallbackValue, &required)
+		parsePart(part, &fallbackValue, &required, &file)
 	}
 
 	return tagOptions{
 		keys:     keys,
 		fallback: fallbackValue,
 		required: required,
+		file:     file,
 	}
 }
 
-func parsePart(part string, fallbackValue *string, required *bool) {
+func parsePart(part string, fallbackValue *string, required *bool, file *bool) {
 	if strings.Contains(part, "default=[") || strings.Contains(part, "fallback=[") {
 		re := regexp.MustCompile(`(?:default|fallback)=\[(.*?)]`)
 		matches := re.FindStringSubmatch(part)
@@ -141,6 +163,8 @@ func parsePart(part string, fallbackValue *string, required *bool) {
 		}
 	} else if strings.TrimSpace(part) == "required" {
 		*required = true
+	} else if strings.TrimSpace(part) == "file" {
+		*file = true
 	}
 }
 

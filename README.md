@@ -210,6 +210,34 @@ if err := env.Unmarshal(&cfg); err != nil {
 // { Username: "admin", Password: "password123" }
 ```
 
+### From file
+
+The `file` tag option can be used to indicate that the value of the variable
+should be loaded from a file. The path of the file given by the value of the
+variable.
+
+```bash
+echo "password123" > /run/secrets/password
+```
+
+```go
+type Config struct {
+    Username string `env:"USERNAME,file"`
+    Password string `env:"PASSWORD,file"`
+}
+
+cfg := Config{
+    Username: "test",
+    Password: "/run/secrets/password",
+}
+
+if err := env.Unmarshal(&cfg); err != nil {
+    log.Fatalf("Error unmarshalling config: %v", err)
+}
+
+// { "Username": "test", "Password": "password123" }
+```
+
 ## Contributing
 
 Feel free to open issues or contribute to the project. Contributions are always
