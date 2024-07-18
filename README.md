@@ -24,9 +24,7 @@ structures, default values, and required fields.
 go get github.com/syntaqx/env
 ```
 
-## Usage
-
-### Basic Usage
+## Basic Usage
 
 ```go
 package main
@@ -51,7 +49,7 @@ func main() {
 }
 ```
 
-### Unmarshal Environment Variables into a Struct
+## Unmarshal to Struct
 
 The `Unmarshal` function allows you to load environment variables into a struct
 based on struct tags. You can use `default` or `fallback` for fallback values
@@ -186,6 +184,58 @@ multiple tags.
 type Config struct {
 	Hosts []string `env:"HOSTS,default=[localhost,localhost2],required"
 }
+```
+
+### Defaults from Code
+
+You may define default values also in your code by initializing your struct data
+before it's populated by `env.Unmarshal`. However, default values defined as
+struct tags will take precedence over the ones defined in code.
+
+```go
+type Config struct {
+    Username string `env:"USERNAME,default=admin"`
+    Password string `env:"PASSWORD"`
+}
+
+cfg := Config{
+    Username: "test",
+    Password: "password123",
+}
+
+if err := env.Unmarshal(&cfg); err != nil {
+    log.Fatalf("Error unmarshalling config: %v", err)
+}
+
+// { Username: "admin", Password: "password123" }
+```
+
+### From file
+
+The `file` tag option can be used to indicate that the value of the variable
+should be loaded from a file. The path of the file given by the value of the
+variable.
+
+```bash
+echo "password123" > /run/secrets/password
+```
+
+```go
+type Config struct {
+    Username string `env:"USERNAME,file"`
+    Password string `env:"PASSWORD,file"`
+}
+
+cfg := Config{
+    Username: "test",
+    Password: "/run/secrets/password",
+}
+
+if err := env.Unmarshal(&cfg); err != nil {
+    log.Fatalf("Error unmarshalling config: %v", err)
+}
+
+// { "Username": "test", "Password": "password123" }
 ```
 
 ## Contributing

@@ -2,6 +2,7 @@ package env
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -35,7 +36,7 @@ func unmarshalWithPrefix(data interface{}, prefix string) error {
 			continue
 		}
 
-		if err := unmarshalField(field, prefix, tag); err != nil {
+		if err := unmarshalField(field, tag, prefix); err != nil {
 			return err
 		}
 	}
@@ -53,9 +54,18 @@ func unmarshalStruct(data interface{}, prefix, tag string) error {
 }
 
 // unmarshalField handles unmarshaling individual fields based on tags
-func unmarshalField(field reflect.Value, prefix, tag string) error {
+func unmarshalField(field reflect.Value, tag string, prefix string) error {
 	tagOpts := parseTag(tag)
 	value, found := findFieldValue(tagOpts.keys, prefix)
+
+	if tagOpts.file && found {
+		fileContent, err := readFileContent(value)
+		if err != nil {
+			return err
+		}
+		value = fileContent
+		found = true
+	}
 
 	if !found {
 		value = tagOpts.fallback
@@ -65,7 +75,20 @@ func unmarshalField(field reflect.Value, prefix, tag string) error {
 		return fmt.Errorf("required environment variable %s is not set", tagOpts.keys[0])
 	}
 
-	return setField(field, value)
+	if found || value != "" {
+		return setField(field, value)
+	}
+
+	return nil
+}
+
+// Helper function to read file content
+func readFileContent(filePath string) (string, error) {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
 }
 
 // findFieldValue tries to find environment variable value based on keys
@@ -84,6 +107,7 @@ type tagOptions struct {
 	keys     []string
 	fallback string
 	required bool
+	file     bool
 }
 
 // parseTag parses the struct tag into tagOptions
@@ -92,6 +116,7 @@ func parseTag(tag string) tagOptions {
 	keys := strings.Split(parts[0], "|")
 	var fallbackValue string
 	required := false
+	file := false
 
 	if len(parts) > 1 {
 		extraParts := parts[1]
@@ -107,22 +132,23 @@ func parseTag(tag string) tagOptions {
 				if !inBrackets {
 					part := extraParts[start:i]
 					start = i + 1
-					parsePart(part, &fallbackValue, &required)
+					parsePart(part, &fallbackValue, &required, &file)
 				}
 			}
 		}
 		part := extraParts[start:]
-		parsePart(part, &fallbackValue, &required)
+		parsePart(part, &fallbackValue, &required, &file)
 	}
 
 	return tagOptions{
 		keys:     keys,
 		fallback: fallbackValue,
 		required: required,
+		file:     file,
 	}
 }
 
-func parsePart(part string, fallbackValue *string, required *bool) {
+func parsePart(part string, fallbackValue *string, required *bool, file *bool) {
 	if strings.Contains(part, "default=[") || strings.Contains(part, "fallback=[") {
 		re := regexp.MustCompile(`(?:default|fallback)=\[(.*?)]`)
 		matches := re.FindStringSubmatch(part)
@@ -137,11 +163,17 @@ func parsePart(part string, fallbackValue *string, required *bool) {
 		}
 	} else if strings.TrimSpace(part) == "required" {
 		*required = true
+	} else if strings.TrimSpace(part) == "file" {
+		*file = true
 	}
 }
 
 // setField sets the value of a struct field based on its type
 func setField(field reflect.Value, value string) error {
+	if value == "" {
+		return nil
+	}
+
 	switch field.Kind() {
 	case reflect.String:
 		field.SetString(value)
@@ -205,4 +237,14 @@ func setField(field reflect.Value, value string) error {
 		return fmt.Errorf("unsupported kind %s", field.Kind())
 	}
 	return nil
+}
+
+// isZeroValue checks if the given field has a zero value
+func isZeroValue(field reflect.Value) bool {
+	if !field.IsValid() {
+		return true
+	}
+	zeroValue := reflect.Zero(field.Type()).Interface()
+	currentValue := field.Interface()
+	return reflect.DeepEqual(zeroValue, currentValue)
 }
