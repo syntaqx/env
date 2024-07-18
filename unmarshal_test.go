@@ -399,3 +399,70 @@ func TestUnmarshalSliceFloatError(t *testing.T) {
 	err := Unmarshal(&cfg)
 	assertError(t, err, "Unmarshal SliceFloatError")
 }
+
+func TestParseTag(t *testing.T) {
+	type TestCase struct {
+		Tag          string
+		ExpectedOpts tagOptions
+	}
+
+	testCases := []TestCase{
+		{
+			Tag: "NOT_REQUIRED,default=required",
+			ExpectedOpts: tagOptions{
+				keys:     []string{"NOT_REQUIRED"},
+				fallback: "required",
+				required: false,
+			},
+		},
+		{
+			Tag: "REQUIRED,required",
+			ExpectedOpts: tagOptions{
+				keys:     []string{"REQUIRED"},
+				fallback: "",
+				required: true,
+			},
+		},
+		{
+			Tag: "REQUIRED_WITH_DEFAULT,default=default,required",
+			ExpectedOpts: tagOptions{
+				keys:     []string{"REQUIRED_WITH_DEFAULT"},
+				fallback: "default",
+				required: true,
+			},
+		},
+		{
+			Tag: "SINGLE_KEY,required,default=default",
+			ExpectedOpts: tagOptions{
+				keys:     []string{"SINGLE_KEY"},
+				fallback: "default",
+				required: true,
+			},
+		},
+		{
+			Tag: "MULTI_KEY1|MULTI_KEY2|MULTI_KEY3,required,default=default",
+			ExpectedOpts: tagOptions{
+				keys:     []string{"MULTI_KEY1", "MULTI_KEY2", "MULTI_KEY3"},
+				fallback: "default",
+				required: true,
+			},
+		},
+		{
+			Tag: "SQUARE_BRACKETS,default=[item1,item2,item3]",
+			ExpectedOpts: tagOptions{
+				keys:     []string{"SQUARE_BRACKETS"},
+				fallback: "item1,item2,item3",
+				required: false,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Tag, func(t *testing.T) {
+			opts := parseTag(tc.Tag)
+			if !reflect.DeepEqual(opts, tc.ExpectedOpts) {
+				t.Errorf("parseTag(%s) returned %+v, expected %+v", tc.Tag, opts, tc.ExpectedOpts)
+			}
+		})
+	}
+}

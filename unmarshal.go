@@ -92,28 +92,51 @@ func parseTag(tag string) tagOptions {
 	keys := strings.Split(parts[0], "|")
 	var fallbackValue string
 	required := false
+
 	if len(parts) > 1 {
 		extraParts := parts[1]
-		if strings.Contains(extraParts, "default=[") || strings.Contains(extraParts, "fallback=[") {
-			re := regexp.MustCompile(`(?:default|fallback)=\[(.*?)\]`)
-			matches := re.FindStringSubmatch(extraParts)
-			if len(matches) > 1 {
-				fallbackValue = matches[1]
-			}
-		} else if strings.Contains(extraParts, "default=") || strings.Contains(extraParts, "fallback=") {
-			re := regexp.MustCompile(`(?:default|fallback)=([^,]+)`)
-			matches := re.FindStringSubmatch(extraParts)
-			if len(matches) > 1 {
-				fallbackValue = matches[1]
+		inBrackets := false
+		start := 0
+		for i := 0; i < len(extraParts); i++ {
+			switch extraParts[i] {
+			case '[':
+				inBrackets = true
+			case ']':
+				inBrackets = false
+			case ',':
+				if !inBrackets {
+					part := extraParts[start:i]
+					start = i + 1
+					parsePart(part, &fallbackValue, &required)
+				}
 			}
 		}
-		required = strings.Contains(extraParts, "required")
+		part := extraParts[start:]
+		parsePart(part, &fallbackValue, &required)
 	}
 
 	return tagOptions{
 		keys:     keys,
 		fallback: fallbackValue,
 		required: required,
+	}
+}
+
+func parsePart(part string, fallbackValue *string, required *bool) {
+	if strings.Contains(part, "default=[") || strings.Contains(part, "fallback=[") {
+		re := regexp.MustCompile(`(?:default|fallback)=\[(.*?)]`)
+		matches := re.FindStringSubmatch(part)
+		if len(matches) > 1 {
+			*fallbackValue = matches[1]
+		}
+	} else if strings.Contains(part, "default=") || strings.Contains(part, "fallback=") {
+		re := regexp.MustCompile(`(?:default|fallback)=([^,]+)`)
+		matches := re.FindStringSubmatch(part)
+		if len(matches) > 1 {
+			*fallbackValue = matches[1]
+		}
+	} else if strings.TrimSpace(part) == "required" {
+		*required = true
 	}
 }
 
