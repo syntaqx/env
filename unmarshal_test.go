@@ -455,6 +455,14 @@ func TestParseTag(t *testing.T) {
 				required: false,
 			},
 		},
+		{
+			Tag: "SQUARE_BRACKETS,default=[item1,item2,item3],required",
+			ExpectedOpts: tagOptions{
+				keys:     []string{"SQUARE_BRACKETS"},
+				fallback: "item1,item2,item3",
+				required: true,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
