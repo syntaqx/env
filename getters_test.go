@@ -18,7 +18,8 @@ func TestGetWithFallback(t *testing.T) {
 	value := GetWithFallback("TEST_GET_WITH_FALLBACK", "fallback")
 	assertEqual(t, "value", value, "GetWithFallback TEST_GET_WITH_FALLBACK")
 
-	Unset("TEST_GET_WITH_FALLBACK")
+	err := Unset("TEST_GET_WITH_FALLBACK")
+	assertNoError(t, err, "Unset TEST_GET_WITH_FALLBACK")
 
 	value = GetWithFallback("TEST_GET_WITH_FALLBACK", "fallback")
 	assertEqual(t, "fallback", value, "GetWithFallback TEST_GET_WITH_FALLBACK")
@@ -44,7 +45,8 @@ func TestGetBoolWithFallback(t *testing.T) {
 	assertNoError(t, err, "GetBoolWithFallback TEST_BOOL_WITH_FALLBACK")
 	assertEqual(t, true, value, "GetBoolWithFallback TEST_BOOL_WITH_FALLBACK")
 
-	Unset("TEST_BOOL_WITH_FALLBACK")
+	err = Unset("TEST_BOOL_WITH_FALLBACK")
+	assertNoError(t, err, "Unset TEST_BOOL_WITH_FALLBACK")
 
 	value, err = GetBoolWithFallback("TEST_BOOL_WITH_FALLBACK", false)
 	assertNoError(t, err, "GetBoolWithFallback TEST_BOOL_WITH_FALLBACK")
@@ -71,7 +73,8 @@ func TestGetIntWithFallback(t *testing.T) {
 	assertNoError(t, err, "GetIntWithFallback TEST_INT_WITH_FALLBACK")
 	assertEqual(t, 42, value, "GetIntWithFallback TEST_INT_WITH_FALLBACK")
 
-	Unset("TEST_INT_WITH_FALLBACK")
+	err = Unset("TEST_INT_WITH_FALLBACK")
+	assertNoError(t, err, "Unset TEST_INT_WITH_FALLBACK")
 
 	value, err = GetIntWithFallback("TEST_INT_WITH_FALLBACK", 10)
 	assertNoError(t, err, "GetIntWithFallback TEST_INT_WITH_FALLBACK")
@@ -98,7 +101,8 @@ func TestGetFloatWithFallback(t *testing.T) {
 	assertNoError(t, err, "GetFloatWithFallback TEST_FLOAT_WITH_FALLBACK")
 	assertEqual(t, 42.42, value, "GetFloatWithFallback TEST_FLOAT_WITH_FALLBACK")
 
-	Unset("TEST_FLOAT_WITH_FALLBACK")
+	err = Unset("TEST_FLOAT_WITH_FALLBACK")
+	assertNoError(t, err, "Unset TEST_FLOAT_WITH_FALLBACK")
 
 	value, err = GetFloatWithFallback("TEST_FLOAT_WITH_FALLBACK", 10.1)
 	assertNoError(t, err, "GetFloatWithFallback TEST_FLOAT_WITH_FALLBACK")
@@ -120,7 +124,8 @@ func TestGetStringSliceWithFallback(t *testing.T) {
 	assertNoError(t, err, "GetStringSliceWithFallback TEST_STRING_SLICE_WITH_FALLBACK")
 	assertEqual(t, []string{"value1", "value2"}, value, "GetStringSliceWithFallback TEST_STRING_SLICE_WITH_FALLBACK")
 
-	Unset("TEST_STRING_SLICE_WITH_FALLBACK")
+	err = Unset("TEST_STRING_SLICE_WITH_FALLBACK")
+	assertNoError(t, err, "Unset TEST_STRING_SLICE_WITH_FALLBACK")
 
 	value, err = GetStringSliceWithFallback("TEST_STRING_SLICE_WITH_FALLBACK", []string{"fallback1", "fallback2"})
 	assertNoError(t, err, "GetStringSliceWithFallback TEST_STRING_SLICE_WITH_FALLBACK")
