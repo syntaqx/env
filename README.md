@@ -3,7 +3,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/syntaqx/env.svg)](https://pkg.go.dev/github.com/syntaqx/env)
 [![codecov](https://codecov.io/gh/syntaqx/env/graph/badge.svg?token=m4bBKy3UG3)](https://codecov.io/gh/syntaqx/env)
 [![Go Report Card](https://goreportcard.com/badge/github.com/syntaqx/env)](https://goreportcard.com/report/github.com/syntaqx/env)
-[![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go)  
+[![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go)
 
 `env` is an environment variable utility package for Go. It provides simple
 functions to get and set environment variables, including support for
@@ -24,9 +24,7 @@ structures, default values, and required fields.
 go get github.com/syntaqx/env
 ```
 
-## Usage
-
-### Basic Usage
+## Basic Usage
 
 ```go
 package main
@@ -51,7 +49,7 @@ func main() {
 }
 ```
 
-### Unmarshal Environment Variables into a Struct
+## Unmarshal to Struct
 
 The `Unmarshal` function allows you to load environment variables into a struct
 based on struct tags. You can use `default` or `fallback` for fallback values
@@ -186,6 +184,30 @@ multiple tags.
 type Config struct {
 	Hosts []string `env:"HOSTS,default=[localhost,localhost2],required"
 }
+```
+
+### Defaults from Code
+
+You may define default values also in your code by initializing your struct data
+before it's populated by `env.Unmarshal`. However, default values defined as
+struct tags will take precedence over the ones defined in code.
+
+```go
+type Config struct {
+    Username string `env:"USERNAME,default=admin"`
+    Password string `env:"PASSWORD"`
+}
+
+cfg := Config{
+    Username: "test",
+    Password: "password123",
+}
+
+if err := env.Unmarshal(&cfg); err != nil {
+    log.Fatalf("Error unmarshalling config: %v", err)
+}
+
+// { Username: "admin", Password: "password123" }
 ```
 
 ## Contributing

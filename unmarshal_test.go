@@ -59,6 +59,78 @@ func TestUnmarshalWithDefaults(t *testing.T) {
 	assertEqual(t, []string{"item1", "item2", "item3"}, cfg.StringSliceFieldMultiple)
 }
 
+func TestUnmarshalDefaultsFromCode(t *testing.T) {
+	type Config struct {
+		Host string `env:"HOST,default=localhost"`
+		Port int    `env:"PORT"`
+	}
+
+	setEnvForTest(t, "HOST", "envhost")
+	setEnvForTest(t, "PORT", "8080")
+
+	cfg := &Config{
+		Host: "syntaqx.com",
+		Port: 3306,
+	}
+
+	err := Unmarshal(cfg)
+	assertNoError(t, err, "Unmarshal")
+
+	expected := Config{
+		Host: "envhost",
+		Port: 8080,
+	}
+
+	assertEqual(t, expected, *cfg, "UnmarshalDefaultsFromCode")
+}
+
+func TestUnmarshalDefaultsFromTags(t *testing.T) {
+	type Config struct {
+		Host string `env:"HOST,default=localhost"`
+		Port int    `env:"PORT"`
+	}
+
+	Unset("HOST")
+	Unset("PORT")
+
+	cfg := &Config{}
+
+	err := Unmarshal(cfg)
+	assertNoError(t, err, "Unmarshal")
+
+	expected := Config{
+		Host: "localhost",
+		Port: 0,
+	}
+
+	assertEqual(t, expected, *cfg, "UnmarshalDefaultsFromTags")
+}
+
+func TestUnmarshalDefaultsFromCodeAndTags(t *testing.T) {
+	type Config struct {
+		Host string `env:"HOST,default=localhost"`
+		Port int    `env:"PORT"`
+	}
+
+	Unset("HOST")
+	Unset("PORT")
+
+	cfg := &Config{
+		Host: "syntaqx.com",
+		Port: 3306,
+	}
+
+	err := Unmarshal(cfg)
+	assertNoError(t, err, "Unmarshal")
+
+	expected := Config{
+		Host: "localhost",
+		Port: 3306,
+	}
+
+	assertEqual(t, expected, *cfg, "UnmarshalDefaultsFromCodeAndTags")
+}
+
 func TestUnmarshalNested(t *testing.T) {
 	setEnvForTest(t, "STRING_FIELD", "string_value")
 	setEnvForTest(t, "INT_FIELD", "456")
@@ -240,6 +312,31 @@ func TestSetFieldUint(t *testing.T) {
 	assertNoError(t, err, "setField Uint")
 
 	assertEqual(t, uint(42), cfg.UIntField, "UintField value")
+}
+
+func TestSetFieldEmptyValue(t *testing.T) {
+	type Config struct {
+		StringField string `env:"STRING_FIELD"`
+		IntField    int    `env:"INT_FIELD"`
+		BoolField   bool   `env:"BOOL_FIELD"`
+	}
+
+	var cfg Config
+
+	field := reflect.ValueOf(&cfg).Elem().FieldByName("StringField")
+	err := setField(field, "")
+	assertNoError(t, err, "setField empty string")
+	assertEqual(t, "", cfg.StringField, "StringField")
+
+	field = reflect.ValueOf(&cfg).Elem().FieldByName("IntField")
+	err = setField(field, "")
+	assertNoError(t, err, "setField empty int")
+	assertEqual(t, 0, cfg.IntField, "IntField")
+
+	field = reflect.ValueOf(&cfg).Elem().FieldByName("BoolField")
+	err = setField(field, "")
+	assertNoError(t, err, "setField empty bool")
+	assertEqual(t, false, cfg.BoolField, "BoolField")
 }
 
 func TestSetFieldBoolError(t *testing.T) {
@@ -470,6 +567,34 @@ func TestParseTag(t *testing.T) {
 			opts := parseTag(tc.Tag)
 			if !reflect.DeepEqual(opts, tc.ExpectedOpts) {
 				t.Errorf("parseTag(%s) returned %+v, expected %+v", tc.Tag, opts, tc.ExpectedOpts)
+			}
+		})
+	}
+}
+
+func TestIsZeroValue(t *testing.T) {
+	tests := []struct {
+		name  string
+		field reflect.Value
+		want  bool
+	}{
+		{"ZeroString", reflect.ValueOf(""), true},
+		{"NonZeroString", reflect.ValueOf("non-zero"), false},
+		{"ZeroInt", reflect.ValueOf(0), true},
+		{"NonZeroInt", reflect.ValueOf(123), false},
+		{"ZeroBool", reflect.ValueOf(false), true},
+		{"NonZeroBool", reflect.ValueOf(true), false},
+		{"ZeroFloat", reflect.ValueOf(0.0), true},
+		{"NonZeroFloat", reflect.ValueOf(1.23), false},
+		{"ZeroSlice", reflect.ValueOf([]string(nil)), true},
+		{"NonZeroSlice", reflect.ValueOf([]string{"item1"}), false},
+		{"InvalidValue", reflect.Value{}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isZeroValue(tt.field); got != tt.want {
+				t.Errorf("isZeroValue() = %v, want %v", got, tt.want)
 			}
 		})
 	}

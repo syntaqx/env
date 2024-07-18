@@ -35,7 +35,7 @@ func unmarshalWithPrefix(data interface{}, prefix string) error {
 			continue
 		}
 
-		if err := unmarshalField(field, prefix, tag); err != nil {
+		if err := unmarshalField(field, tag, prefix); err != nil {
 			return err
 		}
 	}
@@ -53,7 +53,7 @@ func unmarshalStruct(data interface{}, prefix, tag string) error {
 }
 
 // unmarshalField handles unmarshaling individual fields based on tags
-func unmarshalField(field reflect.Value, prefix, tag string) error {
+func unmarshalField(field reflect.Value, tag string, prefix string) error {
 	tagOpts := parseTag(tag)
 	value, found := findFieldValue(tagOpts.keys, prefix)
 
@@ -65,7 +65,11 @@ func unmarshalField(field reflect.Value, prefix, tag string) error {
 		return fmt.Errorf("required environment variable %s is not set", tagOpts.keys[0])
 	}
 
-	return setField(field, value)
+	if found || value != "" {
+		return setField(field, value)
+	}
+
+	return nil
 }
 
 // findFieldValue tries to find environment variable value based on keys
@@ -142,6 +146,10 @@ func parsePart(part string, fallbackValue *string, required *bool) {
 
 // setField sets the value of a struct field based on its type
 func setField(field reflect.Value, value string) error {
+	if value == "" {
+		return nil
+	}
+
 	switch field.Kind() {
 	case reflect.String:
 		field.SetString(value)
@@ -205,4 +213,14 @@ func setField(field reflect.Value, value string) error {
 		return fmt.Errorf("unsupported kind %s", field.Kind())
 	}
 	return nil
+}
+
+// isZeroValue checks if the given field has a zero value
+func isZeroValue(field reflect.Value) bool {
+	if !field.IsValid() {
+		return true
+	}
+	zeroValue := reflect.Zero(field.Type()).Interface()
+	currentValue := field.Interface()
+	return reflect.DeepEqual(zeroValue, currentValue)
 }
