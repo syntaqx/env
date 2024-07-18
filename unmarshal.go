@@ -3,7 +3,6 @@ package env
 import (
 	"fmt"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -88,26 +87,27 @@ type tagOptions struct {
 
 // parseTag parses the struct tag into tagOptions
 func parseTag(tag string) tagOptions {
-	parts := strings.SplitN(tag, ",", 2)
+	parts := strings.Split(tag, ",")
+
+	// Keys are separated by | in the first part
 	keys := strings.Split(parts[0], "|")
+
+	// Initialize fallback value and required flag
 	var fallbackValue string
 	required := false
+
+	// Process extra parts (default, fallback, required)
 	if len(parts) > 1 {
-		extraParts := parts[1]
-		if strings.Contains(extraParts, "default=[") || strings.Contains(extraParts, "fallback=[") {
-			re := regexp.MustCompile(`(?:default|fallback)=\[(.*?)\]`)
-			matches := re.FindStringSubmatch(extraParts)
-			if len(matches) > 1 {
-				fallbackValue = matches[1]
-			}
-		} else if strings.Contains(extraParts, "default=") || strings.Contains(extraParts, "fallback=") {
-			re := regexp.MustCompile(`(?:default|fallback)=([^,]+)`)
-			matches := re.FindStringSubmatch(extraParts)
-			if len(matches) > 1 {
-				fallbackValue = matches[1]
+		for _, part := range parts[1:] {
+			switch {
+			case strings.HasPrefix(part, "default="):
+				fallbackValue = strings.TrimPrefix(part, "default=")
+			case strings.HasPrefix(part, "fallback="):
+				fallbackValue = strings.TrimPrefix(part, "fallback=")
+			case part == "required":
+				required = true
 			}
 		}
-		required = strings.Contains(extraParts, "required")
 	}
 
 	return tagOptions{
