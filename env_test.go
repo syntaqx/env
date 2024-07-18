@@ -17,7 +17,7 @@ type NestedConfig struct {
 	NestedField string `env:"NESTED_FIELD,default=nested"`
 }
 
-type DatabaseConfig struct {
+type DatabaseConfigPrefix struct {
 	Host     string       `env:"DATABASE_HOST,default=localhost"`
 	Port     int          `env:"DATABASE_PORT|DB_PORT,fallback=3306"`
 	Username string       `env:"DATABASE_USERNAME,default=root"`
@@ -26,12 +26,31 @@ type DatabaseConfig struct {
 	Nested   NestedConfig `env:""`
 }
 
+type DatabaseConfig struct {
+	Host     string       `env:"HOST,default=localhost"`
+	Port     int          `env:"PORT|DB_PORT,fallback=3306"`
+	Username string       `env:"USERNAME,default=root"`
+	Password string       `env:"PASSWORD,required"`
+	Database string       `env:"NAME"`
+	Nested   NestedConfig `env:""`
+}
+
 type Config struct {
-	Debug     bool           `env:"DEBUG"`
-	Port      string         `env:"PORT,default=8080"`
-	RedisHost []string       `env:"REDIS_HOST|REDIS_HOSTS,default=localhost:6379"`
-	RedisMode RedisMode      `env:"REDIS_MODE,default=standalone"`
-	Database  DatabaseConfig `env:""`
+	Debug     bool                 `env:"DEBUG"`
+	Port      int                  `env:"PORT,default=8080"`
+	RedisHost []string             `env:"REDIS_HOST|REDIS_HOSTS,default=localhost:6379"`
+	RedisMode RedisMode            `env:"REDIS_MODE,default=standalone"`
+	Database  DatabaseConfigPrefix `env:""`
+}
+
+type PrefixedConfig struct {
+	Database DatabaseConfig `env:"DATABASE"`
+}
+
+type StructWithUntaggedFields struct {
+	UntaggedField1 string
+	UntaggedField2 int
+	TaggedField    string `env:"TAGGED_FIELD,default=default_value"`
 }
 
 func assertNoError(t *testing.T, err error, msgAndArgs ...interface{}) {
@@ -198,8 +217,10 @@ func TestParseBool(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		result := parseBool(tt.input)
-		assertEqual(t, tt.expected, result, "parseBool")
+		t.Run(tt.input, func(t *testing.T) {
+			result := parseBool(tt.input)
+			assertEqual(t, tt.expected, result, "parseBool")
+		})
 	}
 }
 
@@ -230,12 +251,40 @@ func TestUnmarshal(t *testing.T) {
 
 	expected := Config{
 		Debug: true,
-		Port:  "9090",
+		Port:  9090,
 		RedisHost: []string{
 			"host1",
 			"host2",
 		},
 		RedisMode: RedisModeCluster,
+		Database: DatabaseConfigPrefix{
+			Host:     "dbhost",
+			Port:     5432,
+			Username: "admin",
+			Password: "secret",
+			Database: "mydb",
+			Nested: NestedConfig{
+				NestedField: "nested_value",
+			},
+		},
+	}
+
+	assertEqual(t, expected, cfg, "Unmarshal")
+}
+
+func TestUnmarshalPrefixed(t *testing.T) {
+	setEnvForTest(t, "DATABASE_HOST", "dbhost")
+	setEnvForTest(t, "DATABASE_PORT", "5432")
+	setEnvForTest(t, "DATABASE_USERNAME", "admin")
+	setEnvForTest(t, "DATABASE_PASSWORD", "secret")
+	setEnvForTest(t, "DATABASE_NAME", "mydb")
+	setEnvForTest(t, "DATABASE_NESTED_FIELD", "nested_value")
+
+	var cfg PrefixedConfig
+	err := Unmarshal(&cfg)
+	assertNoError(t, err, "Unmarshal")
+
+	expected := PrefixedConfig{
 		Database: DatabaseConfig{
 			Host:     "dbhost",
 			Port:     5432,
@@ -246,6 +295,22 @@ func TestUnmarshal(t *testing.T) {
 				NestedField: "nested_value",
 			},
 		},
+	}
+
+	assertEqual(t, expected, cfg, "Unmarshal")
+}
+
+func TestUnmarshalUntaggedFields(t *testing.T) {
+	setEnvForTest(t, "TAGGED_FIELD", "value")
+
+	var cfg StructWithUntaggedFields
+	err := Unmarshal(&cfg)
+	assertNoError(t, err, "Unmarshal")
+
+	expected := StructWithUntaggedFields{
+		UntaggedField1: "",
+		UntaggedField2: 0,
+		TaggedField:    "value",
 	}
 
 	assertEqual(t, expected, cfg, "Unmarshal")
@@ -312,7 +377,7 @@ func TestUnmarshalSetFieldNestedError(t *testing.T) {
 	setEnvForTest(t, "NESTED_FIELD", "") // Setting an empty value to trigger required error
 
 	var cfg struct {
-		Nested NestedConfig `env:""`
+		Nested NestedConfig
 	}
 	err := Unmarshal(&cfg)
 	assertError(t, err, "Unmarshal NestedConfig")
@@ -339,25 +404,30 @@ func TestUnmarshalRequired(t *testing.T) {
 }
 
 func TestUnmarshalSetFieldErrors(t *testing.T) {
-	type InvalidConfig struct {
-		InvalidUint  uint      `env:"INVALID_UINT"`
-		InvalidFloat float32   `env:"INVALID_FLOAT"`
-		Unsupported  complex64 `env:"UNSUPPORTED"`
+	tests := []struct {
+		envKey    string
+		envValue  string
+		fieldType string
+	}{
+		{"INVALID_UINT", "invalid", "uint"},
+		{"INVALID_FLOAT", "invalid", "float32"},
+		{"UNSUPPORTED", "invalid", "complex64"},
 	}
 
-	var cfg InvalidConfig
+	for _, tt := range tests {
+		t.Run(tt.fieldType, func(t *testing.T) {
+			setEnvForTest(t, tt.envKey, tt.envValue)
 
-	setEnvForTest(t, "INVALID_UINT", "invalid")
-	err := Unmarshal(&cfg)
-	assertError(t, err, "Unmarshal InvalidUint")
+			var cfg struct {
+				InvalidUint  uint      `env:"INVALID_UINT"`
+				InvalidFloat float32   `env:"INVALID_FLOAT"`
+				Unsupported  complex64 `env:"UNSUPPORTED"`
+			}
 
-	setEnvForTest(t, "INVALID_FLOAT", "invalid")
-	err = Unmarshal(&cfg)
-	assertError(t, err, "Unmarshal InvalidFloat")
-
-	setEnvForTest(t, "UNSUPPORTED", "invalid")
-	err = Unmarshal(&cfg)
-	assertError(t, err, "Unmarshal Unsupported")
+			err := Unmarshal(&cfg)
+			assertError(t, err, "Unmarshal "+tt.fieldType)
+		})
+	}
 }
 
 func TestSetFieldUint(t *testing.T) {
