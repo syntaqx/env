@@ -9,12 +9,12 @@ import (
 )
 
 // Unmarshal reads environment variables into a struct based on `env` tags.
-func Unmarshal(data any) error {
+func Unmarshal(data interface{}) error {
 	return unmarshalWithPrefix(data, "")
 }
 
 // unmarshalWithPrefix unmarshals environment variables into a struct with a given prefix.
-func unmarshalWithPrefix(data any, prefix string) error {
+func unmarshalWithPrefix(data interface{}, prefix string) error {
 	v := reflect.ValueOf(data).Elem()
 	t := v.Type()
 
@@ -25,11 +25,7 @@ func unmarshalWithPrefix(data any, prefix string) error {
 
 		// Handle nested structs with optional prefixes
 		if field.Kind() == reflect.Struct {
-			newPrefix := prefix
-			if tag != "" {
-				newPrefix = prefix + tag + "_"
-			}
-			if err := unmarshalWithPrefix(field.Addr().Interface(), newPrefix); err != nil {
+			if err := unmarshalStruct(field.Addr().Interface(), prefix, tag); err != nil {
 				return err
 			}
 			continue
@@ -39,32 +35,48 @@ func unmarshalWithPrefix(data any, prefix string) error {
 			continue
 		}
 
-		tagOpts := parseTag(tag)
-		var value string
-		var found bool
-		for _, key := range tagOpts.keys {
-			fullKey := prefix + key
-			if val, ok := Lookup(fullKey); ok {
-				value = val
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			value = tagOpts.fallback
-		}
-
-		if tagOpts.required && value == "" {
-			return fmt.Errorf("required environment variable %s is not set", tagOpts.keys[0])
-		}
-
-		if err := setField(field, value); err != nil {
+		if err := unmarshalField(field, prefix, tag); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// unmarshalStruct handles unmarshaling nested structs
+func unmarshalStruct(data interface{}, prefix, tag string) error {
+	newPrefix := prefix
+	if tag != "" {
+		newPrefix = prefix + tag + "_"
+	}
+	return unmarshalWithPrefix(data, newPrefix)
+}
+
+// unmarshalField handles unmarshaling individual fields based on tags
+func unmarshalField(field reflect.Value, prefix, tag string) error {
+	tagOpts := parseTag(tag)
+	value, found := findFieldValue(tagOpts.keys, prefix)
+
+	if !found {
+		value = tagOpts.fallback
+	}
+
+	if tagOpts.required && value == "" {
+		return fmt.Errorf("required environment variable %s is not set", tagOpts.keys[0])
+	}
+
+	return setField(field, value)
+}
+
+// findFieldValue tries to find environment variable value based on keys
+func findFieldValue(keys []string, prefix string) (string, bool) {
+	for _, key := range keys {
+		fullKey := prefix + key
+		if val, ok := Lookup(fullKey); ok {
+			return val, true
+		}
+	}
+	return "", false
 }
 
 // tagOptions holds parsed tag options
