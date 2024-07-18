@@ -172,7 +172,7 @@ the values in square brackets:
 
 ```go
 type Config struct {
-	Hosts []string `env:"HOSTS,default=[localhost,localhost2]
+	Hosts []string `env:"HOSTS,default=[localhost,localhost2]`
 }
 ```
 
