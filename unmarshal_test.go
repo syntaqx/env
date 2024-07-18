@@ -345,8 +345,6 @@ func TestUnmarshalSliceFloat(t *testing.T) {
 	assertEqual(t, expected.SliceFloat, cfg.SliceFloat, "SliceFloat")
 }
 
-// New tests for slice parsing errors
-
 func TestUnmarshalSliceBoolError(t *testing.T) {
 	setEnvForTest(t, "SLICE_BOOL_ERROR", "true,notabool,true")
 
