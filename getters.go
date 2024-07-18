@@ -77,6 +77,8 @@ func GetFloatWithFallback(key string, fallback float64) (float64, error) {
 	return fallback, nil
 }
 
+// -- Slice Getters --
+
 // GetStringSlice returns the value of a comma-separated environment variable as a slice of strings.
 func GetStringSlice(key string) ([]string, error) {
 	value, err := Get(key)
@@ -90,6 +92,78 @@ func GetStringSlice(key string) ([]string, error) {
 // of strings or a fallback value if the environment variable is not set.
 func GetStringSliceWithFallback(key string, fallback []string) ([]string, error) {
 	if value, err := GetStringSlice(key); err == nil {
+		return value, nil
+	}
+	return fallback, nil
+}
+
+// GetBoolSlice returns the value of a comma-separated environment variable as a slice of bools.
+func GetBoolSlice(key string) ([]bool, error) {
+	value, err := Get(key)
+	if err != nil {
+		return nil, err
+	}
+	return parseBoolSlice(value)
+}
+
+// GetBoolSliceWithFallback returns the value of a comma-separated environment variable as a slice
+// of bools or a fallback value if the environment variable is not set.
+func GetBoolSliceWithFallback(key string, fallback []bool) ([]bool, error) {
+	if value, err := GetBoolSlice(key); err == nil {
+		return value, nil
+	}
+	return fallback, nil
+}
+
+// GetIntSlice returns the value of a comma-separated environment variable as a slice of ints.
+func GetIntSlice(key string) ([]int, error) {
+	value, err := Get(key)
+	if err != nil {
+		return nil, err
+	}
+	return parseIntSlice(value)
+}
+
+// GetIntSliceWithFallback returns the value of a comma-separated environment variable as a slice
+// of ints or a fallback value if the environment variable is not set.
+func GetIntSliceWithFallback(key string, fallback []int) ([]int, error) {
+	if value, err := GetIntSlice(key); err == nil {
+		return value, nil
+	}
+	return fallback, nil
+}
+
+// GetUintSlice returns the value of a comma-separated environment variable as a slice of uints.
+func GetUintSlice(key string) ([]uint, error) {
+	value, err := Get(key)
+	if err != nil {
+		return nil, err
+	}
+	return parseUintSlice(value)
+}
+
+// GetUintSliceWithFallback returns the value of a comma-separated environment variable as a slice
+// of uints or a fallback value if the environment variable is not set.
+func GetUintSliceWithFallback(key string, fallback []uint) ([]uint, error) {
+	if value, err := GetUintSlice(key); err == nil {
+		return value, nil
+	}
+	return fallback, nil
+}
+
+// GetFloatSlice returns the value of a comma-separated environment variable as a slice of floats.
+func GetFloatSlice(key string) ([]float64, error) {
+	value, err := Get(key)
+	if err != nil {
+		return nil, err
+	}
+	return parseFloatSlice(value)
+}
+
+// GetFloatSliceWithFallback returns the value of a comma-separated environment variable as a slice
+// of floats or a fallback value if the environment variable is not set.
+func GetFloatSliceWithFallback(key string, fallback []float64) ([]float64, error) {
+	if value, err := GetFloatSlice(key); err == nil {
 		return value, nil
 	}
 	return fallback, nil

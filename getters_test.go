@@ -131,3 +131,95 @@ func TestGetStringSliceWithFallback(t *testing.T) {
 	assertNoError(t, err, "GetStringSliceWithFallback TEST_STRING_SLICE_WITH_FALLBACK")
 	assertEqual(t, []string{"fallback1", "fallback2"}, value, "GetStringSliceWithFallback TEST_STRING_SLICE_WITH_FALLBACK")
 }
+
+func TestGetBoolSlice(t *testing.T) {
+	setEnvForTest(t, "TEST_BOOL_SLICE", "true,false,true")
+
+	value, err := GetBoolSlice("TEST_BOOL_SLICE")
+	assertNoError(t, err, "GetBoolSlice TEST_BOOL_SLICE")
+	assertEqual(t, []bool{true, false, true}, value, "GetBoolSlice TEST_BOOL_SLICE")
+}
+
+func TestGetBoolSliceWithFallback(t *testing.T) {
+	setEnvForTest(t, "TEST_BOOL_SLICE_WITH_FALLBACK", "true,false,true")
+
+	value, err := GetBoolSliceWithFallback("TEST_BOOL_SLICE_WITH_FALLBACK", []bool{false, true})
+	assertNoError(t, err, "GetBoolSliceWithFallback TEST_BOOL_SLICE_WITH_FALLBACK")
+	assertEqual(t, []bool{true, false, true}, value, "GetBoolSliceWithFallback TEST_BOOL_SLICE_WITH_FALLBACK")
+
+	err = Unset("TEST_BOOL_SLICE_WITH_FALLBACK")
+	assertNoError(t, err, "Unset TEST_BOOL_SLICE_WITH_FALLBACK")
+
+	value, err = GetBoolSliceWithFallback("TEST_BOOL_SLICE_WITH_FALLBACK", []bool{false, true})
+	assertNoError(t, err, "GetBoolSliceWithFallback TEST_BOOL_SLICE_WITH_FALLBACK")
+	assertEqual(t, []bool{false, true}, value, "GetBoolSliceWithFallback TEST_BOOL_SLICE_WITH_FALLBACK")
+}
+
+func TestGetIntSlice(t *testing.T) {
+	setEnvForTest(t, "TEST_INT_SLICE", "1,2,3")
+
+	value, err := GetIntSlice("TEST_INT_SLICE")
+	assertNoError(t, err, "GetIntSlice TEST_INT_SLICE")
+	assertEqual(t, []int{1, 2, 3}, value, "GetIntSlice TEST_INT_SLICE")
+}
+
+func TestGetIntSliceWithFallback(t *testing.T) {
+	setEnvForTest(t, "TEST_INT_SLICE_WITH_FALLBACK", "1,2,3")
+
+	value, err := GetIntSliceWithFallback("TEST_INT_SLICE_WITH_FALLBACK", []int{4, 5, 6})
+	assertNoError(t, err, "GetIntSliceWithFallback TEST_INT_SLICE_WITH_FALLBACK")
+	assertEqual(t, []int{1, 2, 3}, value, "GetIntSliceWithFallback TEST_INT_SLICE_WITH_FALLBACK")
+
+	err = Unset("TEST_INT_SLICE_WITH_FALLBACK")
+	assertNoError(t, err, "Unset TEST_INT_SLICE_WITH_FALLBACK")
+
+	value, err = GetIntSliceWithFallback("TEST_INT_SLICE_WITH_FALLBACK", []int{4, 5, 6})
+	assertNoError(t, err, "GetIntSliceWithFallback TEST_INT_SLICE_WITH_FALLBACK")
+	assertEqual(t, []int{4, 5, 6}, value, "GetIntSliceWithFallback TEST_INT_SLICE_WITH_FALLBACK")
+}
+
+func TestGetUintSlice(t *testing.T) {
+	setEnvForTest(t, "TEST_UINT_SLICE", "1,2,3")
+
+	value, err := GetUintSlice("TEST_UINT_SLICE")
+	assertNoError(t, err, "GetUintSlice TEST_UINT_SLICE")
+	assertEqual(t, []uint{1, 2, 3}, value, "GetUintSlice TEST_UINT_SLICE")
+}
+
+func TestGetUintSliceWithFallback(t *testing.T) {
+	setEnvForTest(t, "TEST_UINT_SLICE_WITH_FALLBACK", "1,2,3")
+
+	value, err := GetUintSliceWithFallback("TEST_UINT_SLICE_WITH_FALLBACK", []uint{4, 5, 6})
+	assertNoError(t, err, "GetUintSliceWithFallback TEST_UINT_SLICE_WITH_FALLBACK")
+	assertEqual(t, []uint{1, 2, 3}, value, "GetUintSliceWithFallback TEST_UINT_SLICE_WITH_FALLBACK")
+
+	err = Unset("TEST_UINT_SLICE_WITH_FALLBACK")
+	assertNoError(t, err, "Unset TEST_UINT_SLICE_WITH_FALLBACK")
+
+	value, err = GetUintSliceWithFallback("TEST_UINT_SLICE_WITH_FALLBACK", []uint{4, 5, 6})
+	assertNoError(t, err, "GetUintSliceWithFallback TEST_UINT_SLICE_WITH_FALLBACK")
+	assertEqual(t, []uint{4, 5, 6}, value, "GetUintSliceWithFallback TEST_UINT_SLICE_WITH_FALLBACK")
+}
+
+func TestGetFloatSlice(t *testing.T) {
+	setEnvForTest(t, "TEST_FLOAT_SLICE", "1.1,2.2,3.3")
+
+	value, err := GetFloatSlice("TEST_FLOAT_SLICE")
+	assertNoError(t, err, "GetFloatSlice TEST_FLOAT_SLICE")
+	assertEqual(t, []float64{1.1, 2.2, 3.3}, value, "GetFloatSlice TEST_FLOAT_SLICE")
+}
+
+func TestGetFloatSliceWithFallback(t *testing.T) {
+	setEnvForTest(t, "TEST_FLOAT_SLICE_WITH_FALLBACK", "1.1,2.2,3.3")
+
+	value, err := GetFloatSliceWithFallback("TEST_FLOAT_SLICE_WITH_FALLBACK", []float64{4.4, 5.5, 6.6})
+	assertNoError(t, err, "GetFloatSliceWithFallback TEST_FLOAT_SLICE_WITH_FALLBACK")
+	assertEqual(t, []float64{1.1, 2.2, 3.3}, value, "GetFloatSliceWithFallback TEST_FLOAT_SLICE_WITH_FALLBACK")
+
+	err = Unset("TEST_FLOAT_SLICE_WITH_FALLBACK")
+	assertNoError(t, err, "Unset TEST_FLOAT_SLICE_WITH_FALLBACK")
+
+	value, err = GetFloatSliceWithFallback("TEST_FLOAT_SLICE_WITH_FALLBACK", []float64{4.4, 5.5, 6.6})
+	assertNoError(t, err, "GetFloatSliceWithFallback TEST_FLOAT_SLICE_WITH_FALLBACK")
+	assertEqual(t, []float64{4.4, 5.5, 6.6}, value, "GetFloatSliceWithFallback TEST_FLOAT_SLICE_WITH_FALLBACK")
+}
