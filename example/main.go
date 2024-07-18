@@ -30,6 +30,7 @@ type DatabaseConfig struct {
 type Config struct {
 	Debug    bool           `env:"DEBUG"`
 	Port     string         `env:"PORT,default=8080"`
+	Roles    []string       `env:"ROLES,default=[admin,editor]"`
 	Database DatabaseConfig `env:"DATABASE"`
 	Redis    RedisConfig
 }
