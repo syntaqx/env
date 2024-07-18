@@ -271,8 +271,6 @@ func TestUnmarshalFallback(t *testing.T) {
 	assertEqual(t, expected, cfg, "UnmarshalFallback")
 }
 
-// New tests for additional slice types
-
 func TestUnmarshalSliceBool(t *testing.T) {
 	setEnvForTest(t, "SLICE_BOOL", "true,false,true")
 
