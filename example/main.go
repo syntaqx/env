@@ -14,20 +14,24 @@ const (
 	RedisModeCluster    RedisMode = "cluster"
 )
 
+type RedisConfig struct {
+	Host []string  `end:"REDIS_HOST|REDIS_HOSTS,default=localhost:6379"`
+	Mode RedisMode `env:"REDIS_MODE,default=standalone"`
+}
+
 type DatabaseConfig struct {
-	Host     string `env:"DATABASE_HOST,default=localhost"`
-	Port     int    `env:"DATABASE_PORT|DB_PORT,fallback=3306"`
-	Username string `env:"DATABASE_USERNAME,default=root"`
-	Password string `env:"DATABASE_PASSWORD,required"`
-	Database string `env:"DATABASE_NAME"`
+	Host     string `env:"HOST,default=localhost"`
+	Port     int    `env:"PORT|DB_PORT,fallback=3306"`
+	Username string `env:"USERNAME,default=root"`
+	Password string `env:"PASSWORD,required"`
+	Database string `env:"NAME"`
 }
 
 type Config struct {
-	Debug     bool           `env:"DEBUG"`
-	Port      string         `env:"PORT,default=8080"`
-	RedisHost []string       `env:"REDIS_HOST|REDIS_HOSTS,default=localhost:6379"`
-	RedisMode RedisMode      `env:"REDIS_MODE,default=standalone"`
-	Database  DatabaseConfig `env:""`
+	Debug    bool           `env:"DEBUG"`
+	Port     string         `env:"PORT,default=8080"`
+	Database DatabaseConfig `env:"DATABASE"`
+	Redis    RedisConfig
 }
 
 func main() {
