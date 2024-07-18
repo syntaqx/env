@@ -222,7 +222,7 @@ echo "password123" > /run/secrets/password
 
 ```go
 type Config struct {
-    Username string `env:"USERNAME,file"`
+    Username string `env:"USERNAME"`
     Password string `env:"PASSWORD,file"`
 }
 
