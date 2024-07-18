@@ -3,6 +3,7 @@ package env
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -87,33 +88,55 @@ type tagOptions struct {
 
 // parseTag parses the struct tag into tagOptions
 func parseTag(tag string) tagOptions {
-	parts := strings.Split(tag, ",")
-
-	// Keys are separated by | in the first part
+	parts := strings.SplitN(tag, ",", 2)
 	keys := strings.Split(parts[0], "|")
-
-	// Initialize fallback value and required flag
 	var fallbackValue string
 	required := false
 
-	// Process extra parts (default, fallback, required)
 	if len(parts) > 1 {
-		for _, part := range parts[1:] {
-			switch {
-			case strings.HasPrefix(part, "default="):
-				fallbackValue = strings.TrimPrefix(part, "default=")
-			case strings.HasPrefix(part, "fallback="):
-				fallbackValue = strings.TrimPrefix(part, "fallback=")
-			case part == "required":
-				required = true
+		extraParts := parts[1]
+		inBrackets := false
+		start := 0
+		for i := 0; i < len(extraParts); i++ {
+			switch extraParts[i] {
+			case '[':
+				inBrackets = true
+			case ']':
+				inBrackets = false
+			case ',':
+				if !inBrackets {
+					part := extraParts[start:i]
+					start = i + 1
+					parsePart(part, &fallbackValue, &required)
+				}
 			}
 		}
+		part := extraParts[start:]
+		parsePart(part, &fallbackValue, &required)
 	}
 
 	return tagOptions{
 		keys:     keys,
 		fallback: fallbackValue,
 		required: required,
+	}
+}
+
+func parsePart(part string, fallbackValue *string, required *bool) {
+	if strings.Contains(part, "default=[") || strings.Contains(part, "fallback=[") {
+		re := regexp.MustCompile(`(?:default|fallback)=\[(.*?)]`)
+		matches := re.FindStringSubmatch(part)
+		if len(matches) > 1 {
+			*fallbackValue = matches[1]
+		}
+	} else if strings.Contains(part, "default=") || strings.Contains(part, "fallback=") {
+		re := regexp.MustCompile(`(?:default|fallback)=([^,]+)`)
+		matches := re.FindStringSubmatch(part)
+		if len(matches) > 1 {
+			*fallbackValue = matches[1]
+		}
+	} else if strings.TrimSpace(part) == "required" {
+		*required = true
 	}
 }
 

@@ -439,6 +439,22 @@ func TestParseTag(t *testing.T) {
 				required: true,
 			},
 		},
+		{
+			Tag: "MULTI_KEY1|MULTI_KEY2|MULTI_KEY3,required,default=default",
+			ExpectedOpts: tagOptions{
+				keys:     []string{"MULTI_KEY1", "MULTI_KEY2", "MULTI_KEY3"},
+				fallback: "default",
+				required: true,
+			},
+		},
+		{
+			Tag: "SQUARE_BRACKETS,default=[item1,item2,item3]",
+			ExpectedOpts: tagOptions{
+				keys:     []string{"SQUARE_BRACKETS"},
+				fallback: "item1,item2,item3",
+				required: false,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
