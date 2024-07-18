@@ -101,6 +101,7 @@ func parseTag(tag string) tagOptions {
 }
 
 // setField sets the value of a struct field based on its type
+// setField sets the value of a struct field based on its type
 func setField(field reflect.Value, value string) error {
 	switch field.Kind() {
 	case reflect.String:
@@ -134,6 +135,30 @@ func setField(field reflect.Value, value string) error {
 		switch elemType.Kind() {
 		case reflect.String:
 			field.Set(reflect.ValueOf(strings.Split(value, ",")))
+		case reflect.Bool:
+			boolSlice, err := parseBoolSlice(value)
+			if err != nil {
+				return err
+			}
+			field.Set(reflect.ValueOf(boolSlice))
+		case reflect.Int:
+			intSlice, err := parseIntSlice(value)
+			if err != nil {
+				return err
+			}
+			field.Set(reflect.ValueOf(intSlice))
+		case reflect.Uint:
+			uintSlice, err := parseUintSlice(value)
+			if err != nil {
+				return err
+			}
+			field.Set(reflect.ValueOf(uintSlice))
+		case reflect.Float64:
+			floatSlice, err := parseFloatSlice(value)
+			if err != nil {
+				return err
+			}
+			field.Set(reflect.ValueOf(floatSlice))
 		default:
 			return fmt.Errorf("unsupported slice element kind %s", elemType.Kind())
 		}
@@ -141,4 +166,60 @@ func setField(field reflect.Value, value string) error {
 		return fmt.Errorf("unsupported kind %s", field.Kind())
 	}
 	return nil
+}
+
+// parseBoolSlice parses a comma-separated string into a slice of bools
+func parseBoolSlice(value string) ([]bool, error) {
+	values := strings.Split(value, ",")
+	result := make([]bool, len(values))
+	for i, v := range values {
+		boolValue, err := parseBool(v)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = boolValue
+	}
+	return result, nil
+}
+
+// parseIntSlice parses a comma-separated string into a slice of ints
+func parseIntSlice(value string) ([]int, error) {
+	values := strings.Split(value, ",")
+	result := make([]int, len(values))
+	for i, v := range values {
+		intValue, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = intValue
+	}
+	return result, nil
+}
+
+// parseUintSlice parses a comma-separated string into a slice of uints
+func parseUintSlice(value string) ([]uint, error) {
+	values := strings.Split(value, ",")
+	result := make([]uint, len(values))
+	for i, v := range values {
+		uintValue, err := strconv.ParseUint(v, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = uint(uintValue)
+	}
+	return result, nil
+}
+
+// parseFloatSlice parses a comma-separated string into a slice of floats
+func parseFloatSlice(value string) ([]float64, error) {
+	values := strings.Split(value, ",")
+	result := make([]float64, len(values))
+	for i, v := range values {
+		floatValue, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = floatValue
+	}
+	return result, nil
 }

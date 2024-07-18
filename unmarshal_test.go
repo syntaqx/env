@@ -270,3 +270,119 @@ func TestUnmarshalFallback(t *testing.T) {
 
 	assertEqual(t, expected, cfg, "UnmarshalFallback")
 }
+
+// New tests for additional slice types
+
+func TestUnmarshalSliceBool(t *testing.T) {
+	setEnvForTest(t, "SLICE_BOOL", "true,false,true")
+
+	var cfg struct {
+		SliceBool []bool `env:"SLICE_BOOL"`
+	}
+	err := Unmarshal(&cfg)
+	assertNoError(t, err, "Unmarshal SliceBool")
+
+	expected := struct {
+		SliceBool []bool
+	}{
+		SliceBool: []bool{true, false, true},
+	}
+
+	assertEqual(t, expected.SliceBool, cfg.SliceBool, "SliceBool")
+}
+
+func TestUnmarshalSliceInt(t *testing.T) {
+	setEnvForTest(t, "SLICE_INT", "1,2,3")
+
+	var cfg struct {
+		SliceInt []int `env:"SLICE_INT"`
+	}
+	err := Unmarshal(&cfg)
+	assertNoError(t, err, "Unmarshal SliceInt")
+
+	expected := struct {
+		SliceInt []int
+	}{
+		SliceInt: []int{1, 2, 3},
+	}
+
+	assertEqual(t, expected.SliceInt, cfg.SliceInt, "SliceInt")
+}
+
+func TestUnmarshalSliceUint(t *testing.T) {
+	setEnvForTest(t, "SLICE_UINT", "1,2,3")
+
+	var cfg struct {
+		SliceUint []uint `env:"SLICE_UINT"`
+	}
+	err := Unmarshal(&cfg)
+	assertNoError(t, err, "Unmarshal SliceUint")
+
+	expected := struct {
+		SliceUint []uint
+	}{
+		SliceUint: []uint{1, 2, 3},
+	}
+
+	assertEqual(t, expected.SliceUint, cfg.SliceUint, "SliceUint")
+}
+
+func TestUnmarshalSliceFloat(t *testing.T) {
+	setEnvForTest(t, "SLICE_FLOAT", "1.1,2.2,3.3")
+
+	var cfg struct {
+		SliceFloat []float64 `env:"SLICE_FLOAT"`
+	}
+	err := Unmarshal(&cfg)
+	assertNoError(t, err, "Unmarshal SliceFloat")
+
+	expected := struct {
+		SliceFloat []float64
+	}{
+		SliceFloat: []float64{1.1, 2.2, 3.3},
+	}
+
+	assertEqual(t, expected.SliceFloat, cfg.SliceFloat, "SliceFloat")
+}
+
+// New tests for slice parsing errors
+
+func TestUnmarshalSliceBoolError(t *testing.T) {
+	setEnvForTest(t, "SLICE_BOOL_ERROR", "true,notabool,true")
+
+	var cfg struct {
+		SliceBool []bool `env:"SLICE_BOOL_ERROR"`
+	}
+	err := Unmarshal(&cfg)
+	assertError(t, err, "Unmarshal SliceBoolError")
+}
+
+func TestUnmarshalSliceIntError(t *testing.T) {
+	setEnvForTest(t, "SLICE_INT_ERROR", "1,two,3")
+
+	var cfg struct {
+		SliceInt []int `env:"SLICE_INT_ERROR"`
+	}
+	err := Unmarshal(&cfg)
+	assertError(t, err, "Unmarshal SliceIntError")
+}
+
+func TestUnmarshalSliceUintError(t *testing.T) {
+	setEnvForTest(t, "SLICE_UINT_ERROR", "1,-2,3")
+
+	var cfg struct {
+		SliceUint []uint `env:"SLICE_UINT_ERROR"`
+	}
+	err := Unmarshal(&cfg)
+	assertError(t, err, "Unmarshal SliceUintError")
+}
+
+func TestUnmarshalSliceFloatError(t *testing.T) {
+	setEnvForTest(t, "SLICE_FLOAT_ERROR", "1.1,two.two,3.3")
+
+	var cfg struct {
+		SliceFloat []float64 `env:"SLICE_FLOAT_ERROR"`
+	}
+	err := Unmarshal(&cfg)
+	assertError(t, err, "Unmarshal SliceFloatError")
+}
