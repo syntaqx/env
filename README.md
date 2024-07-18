@@ -31,9 +31,9 @@ func main() {
 
 ### Unmarshal Environment Variables into a Struct
 
-The Unmarshal function allows you to load environment variables into a struct
-based on struct tags. You can use default or fallback for fallback values and
-required to enforce that an environment variable must be set.
+The `Unmarshal` function allows you to load environment variables into a struct
+based on struct tags. You can use `default` or `fallback` for fallback values
+and `required` to enforce that an environment variable must be set.
 
 ```go
 package main
@@ -45,31 +45,18 @@ import (
 	"github.com/syntaqx/env"
 )
 
-type RedisMode string
-
-const (
-	RedisModeStandalone RedisMode = "standalone"
-	RedisModeCluster    RedisMode = "cluster"
-)
-
-type RedisConfig struct {
-	Host []string  `end:"REDIS_HOST|REDIS_HOSTS,default=localhost:6379"`
-	Mode RedisMode `env:"REDIS_MODE,default=standalone"`
-}
-
 type DatabaseConfig struct {
-	Host     string `env:"HOST,default=localhost"`
-	Port     int    `env:"PORT|DB_PORT,fallback=3306"`
-	Username string `env:"USERNAME,default=root"`
-	Password string `env:"PASSWORD,required"`
-	Database string `env:"NAME"`
+	Host     string `env:"DATABASE_HOST,default=localhost"`
+	Port     int    `env:"DATABASE_PORT|DB_PORT,fallback=3306"`
+	Username string `env:"DATABASE_USERNAME,default=root"`
+	Password string `env:"DATABASE_PASSWORD,required"`
+	Database string `env:"DATABASE_NAME"`
 }
 
 type Config struct {
 	Debug    bool           `env:"DEBUG"`
 	Port     string         `env:"PORT,default=8080"`
-	Database DatabaseConfig `env:"DATABASE"`
-	Redis    RedisConfig
+    Database DatabaseConfig
 }
 
 func main() {
@@ -78,8 +65,6 @@ func main() {
 	// Set example environment variables
 	_ = env.Set("DEBUG", "true")
 	_ = env.Set("PORT", "9090")
-	_ = env.Set("REDIS_HOST", "host1,host2")
-	_ = env.Set("REDIS_MODE", "cluster")
 	_ = env.Set("DATABASE_HOST", "dbhost")
 	_ = env.Set("DATABASE_PORT", "5432")
 	_ = env.Set("DATABASE_USERNAME", "admin")
@@ -91,5 +76,37 @@ func main() {
 	}
 
 	fmt.Printf("Config: %+v\n", cfg)
+}
+```
+
+### Nested Struct Prefixes
+
+You can use nested prefixes to group environment variables. For example, you can
+
+```go
+type DatabaseConfig struct {
+    Host     string `env:"HOST,default=localhost"`
+    Port     int    `env:"PORT,fallback=3306"`
+    Username string `env:"USERNAME,default=root"`
+    Password string `env:"PASSWORD,required"`
+    Database string `env:"NAME"`
+}
+
+type Config struct {
+    Debug    bool           `env:"DEBUG"`
+    Port     string         `env:"PORT,default=8080"`
+    Database DatabaseConfig `env:"DATABASE"`
+}
+```
+
+While will prefix the environment variables in the `DatabaseConfig` struct
+with `DATABASE_` as they are looked for. This allows you to reuse the same
+struct in multiple places without having to worry about conflicting environment
+variables.
+
+```go
+type Config struct {
+    ReadDatabase DatabaseConfig  `env:"WRITE_DATABASE"`
+    WriteDatabase DatabaseConfig `env:"READ_DATABASE"`
 }
 ```

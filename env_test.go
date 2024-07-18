@@ -18,29 +18,29 @@ type NestedConfig struct {
 }
 
 type DatabaseConfigPrefix struct {
-	Host     string       `env:"DATABASE_HOST,default=localhost"`
-	Port     int          `env:"DATABASE_PORT|DB_PORT,fallback=3306"`
-	Username string       `env:"DATABASE_USERNAME,default=root"`
-	Password string       `env:"DATABASE_PASSWORD,required"`
-	Database string       `env:"DATABASE_NAME"`
-	Nested   NestedConfig `env:""`
+	Host     string `env:"DATABASE_HOST,default=localhost"`
+	Port     int    `env:"DATABASE_PORT|DB_PORT,fallback=3306"`
+	Username string `env:"DATABASE_USERNAME,default=root"`
+	Password string `env:"DATABASE_PASSWORD,required"`
+	Database string `env:"DATABASE_NAME"`
+	Nested   NestedConfig
 }
 
 type DatabaseConfig struct {
-	Host     string       `env:"HOST,default=localhost"`
-	Port     int          `env:"PORT|DB_PORT,fallback=3306"`
-	Username string       `env:"USERNAME,default=root"`
-	Password string       `env:"PASSWORD,required"`
-	Database string       `env:"NAME"`
-	Nested   NestedConfig `env:""`
+	Host     string `env:"HOST,default=localhost"`
+	Port     int    `env:"PORT|DB_PORT,fallback=3306"`
+	Username string `env:"USERNAME,default=root"`
+	Password string `env:"PASSWORD,required"`
+	Database string `env:"NAME"`
+	Nested   NestedConfig
 }
 
 type Config struct {
-	Debug     bool                 `env:"DEBUG"`
-	Port      int                  `env:"PORT,default=8080"`
-	RedisHost []string             `env:"REDIS_HOST|REDIS_HOSTS,default=localhost:6379"`
-	RedisMode RedisMode            `env:"REDIS_MODE,default=standalone"`
-	Database  DatabaseConfigPrefix `env:""`
+	Debug     bool      `env:"DEBUG"`
+	Port      int       `env:"PORT,default=8080"`
+	RedisHost []string  `env:"REDIS_HOST|REDIS_HOSTS,default=localhost:6379"`
+	RedisMode RedisMode `env:"REDIS_MODE,default=standalone"`
+	Database  DatabaseConfigPrefix
 }
 
 type PrefixedConfig struct {
