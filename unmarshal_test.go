@@ -607,7 +607,7 @@ func TestUnmarshalFileOption(t *testing.T) {
 	fileContent := "file_content"
 	tmpFile, err := os.CreateTemp("", "example")
 	assertNoError(t, err, "CreateTemp")
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	_, err = tmpFile.WriteString(fileContent)
 	assertNoError(t, err, "WriteString")

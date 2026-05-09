@@ -105,7 +105,7 @@ func expandVariables(value string, structPtr interface{}) string {
 		if !ok {
 			envValue = getDefaultFromStruct(envVar, structPtr)
 		}
-		value = strings.Replace(value, match[0], envValue, -1)
+		value = strings.ReplaceAll(value, match[0], envValue)
 	}
 
 	return value
