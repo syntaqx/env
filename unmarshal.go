@@ -86,11 +86,12 @@ func unmarshalField(field reflect.Value, tag string, prefix string, structPtr in
 	return nil
 }
 
+var expandRe = regexp.MustCompile(`\$\{([^}]+)\}|\$([A-Za-z_][A-Za-z0-9_]*)`)
+
 // expandVariables replaces placeholders with actual environment variable values or defaults if not set.
 func expandVariables(value string, structPtr interface{}) string {
 	// Handle both ${var} and $var syntax
-	re := regexp.MustCompile(`\$\{([^}]+)\}|\$([A-Za-z_][A-Za-z0-9_]*)`)
-	matches := re.FindAllStringSubmatch(value, -1)
+	matches := expandRe.FindAllStringSubmatch(value, -1)
 
 	for _, match := range matches {
 		var envVar string
@@ -207,16 +208,19 @@ func parseTag(tag string) tagOptions {
 	}
 }
 
+var (
+	partRe       = regexp.MustCompile(`(?:default|fallback)=([^,]+)`)
+	partSquareRe = regexp.MustCompile(`(?:default|fallback)=\[(.*?)]`)
+)
+
 func parsePart(part string, fallbackValue *string, required *bool, file *bool, expand *bool) {
 	if strings.Contains(part, "default=[") || strings.Contains(part, "fallback=[") {
-		re := regexp.MustCompile(`(?:default|fallback)=\[(.*?)]`)
-		matches := re.FindStringSubmatch(part)
+		matches := partSquareRe.FindStringSubmatch(part)
 		if len(matches) > 1 {
 			*fallbackValue = matches[1]
 		}
 	} else if strings.Contains(part, "default=") || strings.Contains(part, "fallback=") {
-		re := regexp.MustCompile(`(?:default|fallback)=([^,]+)`)
-		matches := re.FindStringSubmatch(part)
+		matches := partRe.FindStringSubmatch(part)
 		if len(matches) > 1 {
 			*fallbackValue = matches[1]
 		}

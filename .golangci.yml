@@ -1,3 +1,7 @@
-linters-settings:
-  goimports:
-    local-prefixes: github.com/syntaqx/env
+version: "2"
+
+formatters:
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/syntaqx/env
