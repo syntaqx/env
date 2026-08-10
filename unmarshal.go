@@ -1,31 +1,39 @@
 package env
 
 import (
+	"encoding"
 	"fmt"
 	"os"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
+)
+
+var (
+	durationType        = reflect.TypeOf(time.Duration(0))
+	textUnmarshalerType = reflect.TypeFor[encoding.TextUnmarshaler]()
 )
 
 // Unmarshal reads environment variables into a struct based on `env` tags.
-func Unmarshal(data interface{}) error {
+func Unmarshal(data any) error {
 	return unmarshalWithPrefix(data, "")
 }
 
 // unmarshalWithPrefix unmarshals environment variables into a struct with a given prefix.
-func unmarshalWithPrefix(data interface{}, prefix string) error {
+func unmarshalWithPrefix(data any, prefix string) error {
 	v := reflect.ValueOf(data).Elem()
 	t := v.Type()
 
-	for i := 0; i < v.NumField(); i++ {
+	for i := range v.NumField() {
 		field := v.Field(i)
 		fieldType := t.Field(i)
 		tag := fieldType.Tag.Get("env")
 
-		// Handle nested structs with optional prefixes
-		if field.Kind() == reflect.Struct {
+		// Handle nested structs with optional prefixes, unless the type knows
+		// how to unmarshal itself from text (e.g. time.Time).
+		if field.Kind() == reflect.Struct && !canUnmarshalText(field) {
 			if err := unmarshalStruct(field.Addr().Interface(), prefix, tag); err != nil {
 				return err
 			}
@@ -45,7 +53,7 @@ func unmarshalWithPrefix(data interface{}, prefix string) error {
 }
 
 // unmarshalStruct handles unmarshaling nested structs
-func unmarshalStruct(data interface{}, prefix, tag string) error {
+func unmarshalStruct(data any, prefix, tag string) error {
 	newPrefix := prefix
 	if tag != "" {
 		newPrefix = prefix + tag + "_"
@@ -54,7 +62,7 @@ func unmarshalStruct(data interface{}, prefix, tag string) error {
 }
 
 // unmarshalField handles unmarshaling individual fields based on tags
-func unmarshalField(field reflect.Value, tag string, prefix string, structPtr interface{}) error {
+func unmarshalField(field reflect.Value, tag string, prefix string, structPtr any) error {
 	tagOpts := parseTag(tag)
 	value, found := findFieldValue(tagOpts.keys, prefix)
 
@@ -89,7 +97,7 @@ func unmarshalField(field reflect.Value, tag string, prefix string, structPtr in
 var expandRe = regexp.MustCompile(`\$\{([^}]+)\}|\$([A-Za-z_][A-Za-z0-9_]*)`)
 
 // expandVariables replaces placeholders with actual environment variable values or defaults if not set.
-func expandVariables(value string, structPtr interface{}) string {
+func expandVariables(value string, structPtr any) string {
 	// Handle both ${var} and $var syntax
 	matches := expandRe.FindAllStringSubmatch(value, -1)
 
@@ -112,11 +120,11 @@ func expandVariables(value string, structPtr interface{}) string {
 }
 
 // getDefaultFromStruct retrieves the default value from the struct if available
-func getDefaultFromStruct(fieldName string, structPtr interface{}) string {
+func getDefaultFromStruct(fieldName string, structPtr any) string {
 	v := reflect.ValueOf(structPtr).Elem()
 	t := v.Type()
 
-	for i := 0; i < v.NumField(); i++ {
+	for i := range v.NumField() {
 		fieldType := t.Field(i)
 		tag := fieldType.Tag.Get("env")
 		tagOpts := parseTag(tag)
@@ -181,7 +189,7 @@ func parseTag(tag string) tagOptions {
 		extraParts := parts[1]
 		inBrackets := false
 		start := 0
-		for i := 0; i < len(extraParts); i++ {
+		for i := range len(extraParts) {
 			switch extraParts[i] {
 			case '[':
 				inBrackets = true
@@ -237,6 +245,19 @@ func parsePart(part string, fallbackValue *string, required *bool, file *bool, e
 func setField(field reflect.Value, value string) error {
 	if value == "" {
 		return nil
+	}
+
+	if field.Type() == durationType {
+		duration, err := time.ParseDuration(value)
+		if err != nil {
+			return err
+		}
+		field.SetInt(int64(duration))
+		return nil
+	}
+
+	if canUnmarshalText(field) {
+		return field.Addr().Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(value))
 	}
 
 	switch field.Kind() {
@@ -304,12 +325,8 @@ func setField(field reflect.Value, value string) error {
 	return nil
 }
 
-// isZeroValue checks if the given field has a zero value
-func isZeroValue(field reflect.Value) bool {
-	if !field.IsValid() {
-		return true
-	}
-	zeroValue := reflect.Zero(field.Type()).Interface()
-	currentValue := field.Interface()
-	return reflect.DeepEqual(zeroValue, currentValue)
+// canUnmarshalText reports whether the addressable field implements
+// encoding.TextUnmarshaler.
+func canUnmarshalText(field reflect.Value) bool {
+	return field.CanAddr() && field.Addr().Type().Implements(textUnmarshalerType)
 }

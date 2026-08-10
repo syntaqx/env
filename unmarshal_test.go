@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 type Config struct {
@@ -568,32 +569,75 @@ func TestParseTag(t *testing.T) {
 	}
 }
 
-func TestIsZeroValue(t *testing.T) {
-	tests := []struct {
-		name  string
-		field reflect.Value
-		want  bool
-	}{
-		{"ZeroString", reflect.ValueOf(""), true},
-		{"NonZeroString", reflect.ValueOf("non-zero"), false},
-		{"ZeroInt", reflect.ValueOf(0), true},
-		{"NonZeroInt", reflect.ValueOf(123), false},
-		{"ZeroBool", reflect.ValueOf(false), true},
-		{"NonZeroBool", reflect.ValueOf(true), false},
-		{"ZeroFloat", reflect.ValueOf(0.0), true},
-		{"NonZeroFloat", reflect.ValueOf(1.23), false},
-		{"ZeroSlice", reflect.ValueOf([]string(nil)), true},
-		{"NonZeroSlice", reflect.ValueOf([]string{"item1"}), false},
-		{"InvalidValue", reflect.Value{}, true},
-	}
+func TestUnmarshalDuration(t *testing.T) {
+	setEnvForTest(t, "TIMEOUT", "1h30m")
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := isZeroValue(tt.field); got != tt.want {
-				t.Errorf("isZeroValue() = %v, want %v", got, tt.want)
-			}
-		})
+	var cfg struct {
+		Timeout time.Duration `env:"TIMEOUT"`
 	}
+	err := Unmarshal(&cfg)
+	assertNoError(t, err, "Unmarshal Duration")
+	assertEqual(t, 90*time.Minute, cfg.Timeout, "Duration")
+}
+
+func TestUnmarshalDurationDefault(t *testing.T) {
+	var cfg struct {
+		Timeout time.Duration `env:"TIMEOUT_DEFAULT,default=5s"`
+	}
+	err := Unmarshal(&cfg)
+	assertNoError(t, err, "Unmarshal Duration default")
+	assertEqual(t, 5*time.Second, cfg.Timeout, "Duration default")
+}
+
+func TestUnmarshalDurationError(t *testing.T) {
+	setEnvForTest(t, "BAD_TIMEOUT", "not-a-duration")
+
+	var cfg struct {
+		Timeout time.Duration `env:"BAD_TIMEOUT"`
+	}
+	err := Unmarshal(&cfg)
+	assertError(t, err, "Unmarshal Duration error")
+}
+
+func TestUnmarshalTextUnmarshaler(t *testing.T) {
+	setEnvForTest(t, "CREATED_AT", "2024-01-02T15:04:05Z")
+
+	var cfg struct {
+		CreatedAt time.Time `env:"CREATED_AT"`
+	}
+	err := Unmarshal(&cfg)
+	assertNoError(t, err, "Unmarshal TextUnmarshaler")
+
+	expected, _ := time.Parse(time.RFC3339, "2024-01-02T15:04:05Z")
+	assertEqual(t, expected, cfg.CreatedAt, "TextUnmarshaler time.Time")
+}
+
+func TestUnmarshalTextUnmarshalerError(t *testing.T) {
+	setEnvForTest(t, "CREATED_AT_BAD", "not-a-time")
+
+	var cfg struct {
+		CreatedAt time.Time `env:"CREATED_AT_BAD"`
+	}
+	err := Unmarshal(&cfg)
+	assertError(t, err, "Unmarshal TextUnmarshaler error")
+}
+
+type upperString string
+
+func (u *upperString) UnmarshalText(text []byte) error {
+	*u = upperString(strings.ToUpper(string(text)))
+	return nil
+}
+
+func TestUnmarshalTextUnmarshalerScalar(t *testing.T) {
+	setEnvForTest(t, "SCALAR_NAME", "syntaqx")
+
+	var cfg struct {
+		Name upperString `env:"SCALAR_NAME"`
+	}
+	err := Unmarshal(&cfg)
+	assertNoError(t, err, "Unmarshal scalar TextUnmarshaler")
+	assertEqual(t, upperString("SYNTAQX"), cfg.Name, "scalar TextUnmarshaler")
 }
 
 func TestUnmarshalFileOption(t *testing.T) {

@@ -2,6 +2,7 @@ package env
 
 import (
 	"testing"
+	"time"
 )
 
 func TestGet(t *testing.T) {
@@ -79,6 +80,68 @@ func TestGetIntWithFallback(t *testing.T) {
 	value, err = GetIntWithFallback("TEST_INT_WITH_FALLBACK", 10)
 	assertNoError(t, err, "GetIntWithFallback TEST_INT_WITH_FALLBACK")
 	assertEqual(t, 10, value, "GetIntWithFallback TEST_INT_WITH_FALLBACK")
+}
+
+func TestGetUint(t *testing.T) {
+	setEnvForTest(t, "TEST_UINT", "42")
+
+	value, err := GetUint("TEST_UINT")
+	assertNoError(t, err, "GetUint TEST_UINT")
+	assertEqual(t, uint(42), value, "GetUint TEST_UINT")
+
+	_, err = GetUint("TEST_UINT_UNSET")
+	assertError(t, err, "GetUint unset")
+
+	setEnvForTest(t, "TEST_UINT", "invalid")
+
+	_, err = GetUint("TEST_UINT")
+	assertError(t, err, "GetUint TEST_UINT invalid")
+}
+
+func TestGetUintWithFallback(t *testing.T) {
+	setEnvForTest(t, "TEST_UINT_WITH_FALLBACK", "42")
+
+	value, err := GetUintWithFallback("TEST_UINT_WITH_FALLBACK", 10)
+	assertNoError(t, err, "GetUintWithFallback TEST_UINT_WITH_FALLBACK")
+	assertEqual(t, uint(42), value, "GetUintWithFallback TEST_UINT_WITH_FALLBACK")
+
+	err = Unset("TEST_UINT_WITH_FALLBACK")
+	assertNoError(t, err, "Unset TEST_UINT_WITH_FALLBACK")
+
+	value, err = GetUintWithFallback("TEST_UINT_WITH_FALLBACK", 10)
+	assertNoError(t, err, "GetUintWithFallback TEST_UINT_WITH_FALLBACK")
+	assertEqual(t, uint(10), value, "GetUintWithFallback TEST_UINT_WITH_FALLBACK")
+}
+
+func TestGetDuration(t *testing.T) {
+	setEnvForTest(t, "TEST_DURATION", "1h30m")
+
+	value, err := GetDuration("TEST_DURATION")
+	assertNoError(t, err, "GetDuration TEST_DURATION")
+	assertEqual(t, 90*time.Minute, value, "GetDuration TEST_DURATION")
+
+	_, err = GetDuration("TEST_DURATION_UNSET")
+	assertError(t, err, "GetDuration unset")
+
+	setEnvForTest(t, "TEST_DURATION", "invalid")
+
+	_, err = GetDuration("TEST_DURATION")
+	assertError(t, err, "GetDuration TEST_DURATION invalid")
+}
+
+func TestGetDurationWithFallback(t *testing.T) {
+	setEnvForTest(t, "TEST_DURATION_WITH_FALLBACK", "1h30m")
+
+	value, err := GetDurationWithFallback("TEST_DURATION_WITH_FALLBACK", time.Second)
+	assertNoError(t, err, "GetDurationWithFallback TEST_DURATION_WITH_FALLBACK")
+	assertEqual(t, 90*time.Minute, value, "GetDurationWithFallback TEST_DURATION_WITH_FALLBACK")
+
+	err = Unset("TEST_DURATION_WITH_FALLBACK")
+	assertNoError(t, err, "Unset TEST_DURATION_WITH_FALLBACK")
+
+	value, err = GetDurationWithFallback("TEST_DURATION_WITH_FALLBACK", time.Second)
+	assertNoError(t, err, "GetDurationWithFallback TEST_DURATION_WITH_FALLBACK")
+	assertEqual(t, time.Second, value, "GetDurationWithFallback TEST_DURATION_WITH_FALLBACK")
 }
 
 func TestGetFloat(t *testing.T) {

@@ -2,7 +2,6 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/syntaqx/env.svg)](https://pkg.go.dev/github.com/syntaqx/env)
 [![codecov](https://codecov.io/gh/syntaqx/env/graph/badge.svg?token=m4bBKy3UG3)](https://codecov.io/gh/syntaqx/env)
-[![Go Report Card](https://goreportcard.com/badge/github.com/syntaqx/env)](https://goreportcard.com/report/github.com/syntaqx/env)
 [![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go)
 
 `env` is an environment variable utility package for Go. It provides simple
@@ -13,10 +12,11 @@ structures, default values, and required fields.
 ## Features
 
 - __Basic Get/Set__: Simple functions to get, set, and unset environment variables.
-- __Type Conversion__: Functions to get environment variables as different types (int, bool, float).
+- __Type Conversion__: Functions to get environment variables as different types (int, uint, bool, float, duration).
 - __Fallback Values__: Support for fallback values if an environment variable is not set.
 - __Unmarshal__: Load environment variables into structs using struct tags.
 - __Nested Structs__: Support for nested struct prefixes to group environment variables.
+- __Custom Types__: Any type implementing `encoding.TextUnmarshaler` (such as `time.Time`) is decoded automatically.
 
 ## Installation
 
@@ -282,6 +282,43 @@ Which results in:
 ```bash
 go run main.go
 {Host:localhost Port:8080 Address:localhost:8080}
+```
+
+### Durations
+
+`time.Duration` fields are parsed using `time.ParseDuration`, so any value it
+accepts (e.g. `300ms`, `1h30m`, `5s`) works, including as a `default`:
+
+```go
+type Config struct {
+    Timeout time.Duration `env:"TIMEOUT,default=30s"`
+}
+```
+
+The same is available directly via `env.GetDuration` and
+`env.GetDurationWithFallback`.
+
+### Custom types
+
+Any field whose type implements [`encoding.TextUnmarshaler`](https://pkg.go.dev/encoding#TextUnmarshaler)
+is decoded automatically. This covers many standard-library types out of the box
+(such as `time.Time`, `net.IP`, and `netip.Addr`) as well as your own types:
+
+```go
+type Config struct {
+    CreatedAt time.Time `env:"CREATED_AT"` // RFC 3339, e.g. 2024-01-02T15:04:05Z
+}
+
+type Level string
+
+func (l *Level) UnmarshalText(text []byte) error {
+    *l = Level(strings.ToLower(string(text)))
+    return nil
+}
+
+type AppConfig struct {
+    LogLevel Level `env:"LOG_LEVEL,default=INFO"`
+}
 ```
 
 ## Contributing

@@ -1,3 +1,11 @@
+// Package env provides utilities for reading, writing, and parsing environment
+// variables.
+//
+// It offers typed getters (string, bool, int, uint, float, time.Duration, and
+// their slice variants) with optional fallbacks, plus Unmarshal for loading
+// environment variables into structs via `env` tags. Unmarshal supports nested
+// struct prefixes, default and required values, variable expansion, loading
+// values from files, and any type implementing encoding.TextUnmarshaler.
 package env
 
 import (

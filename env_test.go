@@ -5,21 +5,21 @@ import (
 	"testing"
 )
 
-func assertNoError(t *testing.T, err error, msgAndArgs ...interface{}) {
+func assertNoError(t *testing.T, err error, msgAndArgs ...any) {
 	t.Helper()
 	if err != nil {
 		t.Errorf("unexpected error: %v %v", err, msgAndArgs)
 	}
 }
 
-func assertError(t *testing.T, err error, msgAndArgs ...interface{}) {
+func assertError(t *testing.T, err error, msgAndArgs ...any) {
 	t.Helper()
 	if err == nil {
-		t.Errorf("expected error, got nil %v", msgAndArgs...)
+		t.Errorf("expected error, got nil %v", msgAndArgs)
 	}
 }
 
-func assertEqual(t *testing.T, expected, actual interface{}, msgAndArgs ...interface{}) {
+func assertEqual(t *testing.T, expected, actual any, msgAndArgs ...any) {
 	t.Helper()
 	if !reflect.DeepEqual(expected, actual) {
 		t.Errorf("expected %v, got %v %v", expected, actual, msgAndArgs)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Get returns the value of an environment variable.
@@ -59,6 +60,28 @@ func GetIntWithFallback(key string, fallback int) (int, error) {
 	return fallback, nil
 }
 
+// GetUint returns the value of an environment variable as an unsigned integer.
+func GetUint(key string) (uint, error) {
+	value, err := Get(key)
+	if err != nil {
+		return 0, err
+	}
+	parsed, err := strconv.ParseUint(value, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return uint(parsed), nil
+}
+
+// GetUintWithFallback returns the value of an environment variable as an unsigned
+// integer or a fallback value if the environment variable is not set or invalid.
+func GetUintWithFallback(key string, fallback uint) (uint, error) {
+	if value, err := GetUint(key); err == nil {
+		return value, nil
+	}
+	return fallback, nil
+}
+
 // GetFloat returns the value of an environment variable as a float.
 func GetFloat(key string) (float64, error) {
 	value, err := Get(key)
@@ -72,6 +95,24 @@ func GetFloat(key string) (float64, error) {
 // or a fallback value if the environment variable is not set or invalid.
 func GetFloatWithFallback(key string, fallback float64) (float64, error) {
 	if value, err := GetFloat(key); err == nil {
+		return value, nil
+	}
+	return fallback, nil
+}
+
+// GetDuration returns the value of an environment variable as a time.Duration.
+func GetDuration(key string) (time.Duration, error) {
+	value, err := Get(key)
+	if err != nil {
+		return 0, err
+	}
+	return time.ParseDuration(value)
+}
+
+// GetDurationWithFallback returns the value of an environment variable as a
+// time.Duration or a fallback value if the environment variable is not set or invalid.
+func GetDurationWithFallback(key string, fallback time.Duration) (time.Duration, error) {
+	if value, err := GetDuration(key); err == nil {
 		return value, nil
 	}
 	return fallback, nil
