@@ -3,9 +3,27 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
+	"strconv"
+	"strings"
 
 	"github.com/syntaqx/env"
 )
+
+// Port accepts either "8080" or ":8080" and normalizes it by trimming a leading
+// ":". It stays a string so it can be passed straight to net.JoinHostPort.
+// Because it implements encoding.TextUnmarshaler, env.Unmarshal uses it
+// automatically wherever a Port field appears.
+type Port string
+
+func (p *Port) UnmarshalText(text []byte) error {
+	s := strings.TrimPrefix(strings.TrimSpace(string(text)), ":")
+	if _, err := strconv.Atoi(s); err != nil {
+		return fmt.Errorf("invalid port %q: %w", text, err)
+	}
+	*p = Port(s)
+	return nil
+}
 
 type RedisMode string
 
@@ -30,11 +48,16 @@ type DatabaseConfig struct {
 type Config struct {
 	Debug    bool           `env:"DEBUG"`
 	Host     string         `env:"HOST,default=localhost"`
-	Port     string         `env:"PORT,default=8080"`
-	Address  string         `env:"ADDRESS,default=${HOST}:$PORT,expand"`
+	Port     Port           `env:"PORT,default=8080"`
 	Roles    []string       `env:"ROLES,default=[admin,editor]"`
 	Database DatabaseConfig `env:"DATABASE"`
 	Redis    RedisConfig
+}
+
+// Addr derives the listen address from Host and Port together, rather than
+// reading it from a separate environment variable.
+func (c Config) Addr() string {
+	return net.JoinHostPort(c.Host, string(c.Port))
 }
 
 func setEnvVars(vars map[string]string) {
@@ -48,7 +71,7 @@ func setEnvVars(vars map[string]string) {
 func main() {
 	envVars := map[string]string{
 		"DEBUG":             "true",
-		"PORT":              "9090",
+		"PORT":              ":9090",
 		"REDIS_HOST":        "host1,host2",
 		"REDIS_MODE":        "cluster",
 		"DATABASE_HOST":     "dbhost",
@@ -66,4 +89,5 @@ func main() {
 	}
 
 	fmt.Printf("Config: %+v\n", cfg)
+	fmt.Printf("Addr:   %s\n", cfg.Addr())
 }

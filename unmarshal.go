@@ -32,7 +32,7 @@ func unmarshalWithPrefix(data any, prefix string) error {
 		tag := fieldType.Tag.Get("env")
 
 		// Handle nested structs with optional prefixes, unless the type knows
-		// how to unmarshal itself from text (e.g. time.Time).
+		// how to unmarshal itself (e.g. time.Time).
 		if field.Kind() == reflect.Struct && !canUnmarshalText(field) {
 			if err := unmarshalStruct(field.Addr().Interface(), prefix, tag); err != nil {
 				return err
